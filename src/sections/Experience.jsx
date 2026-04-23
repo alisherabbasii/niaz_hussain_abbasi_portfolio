@@ -1,10 +1,20 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Briefcase, MapPin, Calendar } from 'lucide-react';
+import { MapPin, Calendar, Ruler, Flame, Building2 } from 'lucide-react';
+
+const slideLeft = {
+  hidden: { opacity: 0, x: -32 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } }
+};
+
+const slideRight = {
+  hidden: { opacity: 0, x: 32 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } }
+};
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } }
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } }
 };
 
 const stagger = {
@@ -14,27 +24,82 @@ const stagger = {
 
 const experiences = [
   {
-    role: "Survey Engineer & Document Controller",
-    company: "Infrastructure Projects",
-    location: "Pakistan",
-    date: "2020 - Present",
-    description: "Leading land survey operations for large-scale infrastructure projects while managing document control — ensuring accurate records and smooth communication between project teams using Oracle and MS Excel.",
+    role: 'Survey Engineer & Document Controller',
+    company: 'Infrastructure Projects',
+    location: 'Pakistan',
+    date: '2020 – Present',
+    duration: '4+ yrs',
+    description:
+      'Leading land survey operations for large-scale infrastructure projects while managing document control — ensuring accurate records and seamless team communication using Oracle and MS Excel.',
+    Icon: Ruler,
+    tags: ['Oracle', 'MS Excel', 'GPS Surveying'],
+    iconBg: 'bg-accent',
+    ringColor: 'ring-accent/20',
+    tagStyle: 'bg-accent/10 text-accent',
+    borderColor: 'border-accent/40',
   },
   {
-    role: "Blasting Supervisor",
-    company: "Mountain Construction Projects",
-    location: "Northern Mountains, PK",
-    date: "2016 - 2020",
-    description: "Supervised controlled blasting operations on steep mountainous terrain, enabling major highway expansions through rocky passes while maintaining rigorous safety compliance throughout.",
+    role: 'Blasting Supervisor',
+    company: 'Mountain Construction Projects',
+    location: 'Northern Mountains, PK',
+    date: '2016 – 2020',
+    duration: '4 yrs',
+    description:
+      'Supervised controlled blasting operations on steep mountainous terrain, enabling major highway expansions through rocky passes with rigorous safety compliance and zero incidents.',
+    Icon: Flame,
+    tags: ['Safety Compliance', 'Mountain Terrain'],
+    iconBg: 'bg-amber-400',
+    ringColor: 'ring-amber-200',
+    tagStyle: 'bg-amber-50 text-amber-600',
+    borderColor: 'border-amber-300',
   },
   {
-    role: "Civil Supervisor & Drawing Expert",
-    company: "Construction Division",
-    location: "Pakistan",
-    date: "2012 - 2016",
-    description: "Managed day-to-day site operations using Civil 3D and AutoCAD construction drawings, coordinating material logistics and teams to deliver commercial and infrastructure projects with precision.",
-  }
+    role: 'Civil Supervisor & Drawing Expert',
+    company: 'Construction Division',
+    location: 'Pakistan',
+    date: '2012 – 2016',
+    duration: '4 yrs',
+    description:
+      'Managed site operations end-to-end — from Civil 3D and AutoCAD drawing interpretation to coordinating material logistics and teams for commercial and infrastructure projects.',
+    Icon: Building2,
+    tags: ['Civil 3D', 'AutoCAD', 'Site Management'],
+    iconBg: 'bg-emerald-500',
+    ringColor: 'ring-emerald-200',
+    tagStyle: 'bg-emerald-50 text-emerald-600',
+    borderColor: 'border-emerald-300',
+  },
 ];
+
+const ExperienceCard = ({ exp }) => (
+  <div
+    className={`card border border-slate-100 hover:border-transparent hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group-hover:bg-white`}
+  >
+    {/* Date badge */}
+    <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border ${exp.borderColor} ${exp.tagStyle}`}>
+        <Calendar size={11} />
+        {exp.date}
+      </span>
+      <span className="text-xs text-slate-400 font-semibold">{exp.duration}</span>
+    </div>
+
+    <h3 className="text-base font-bold text-primary mb-1 leading-snug">{exp.role}</h3>
+
+    <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wide">
+      <span className="flex items-center gap-1"><MapPin size={11} /> {exp.location}</span>
+    </div>
+
+    <p className="text-sm text-slate-500 leading-relaxed font-light mb-4">{exp.description}</p>
+
+    <div className="flex flex-wrap gap-2">
+      {exp.tags.map((tag) => (
+        <span key={tag} className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${exp.tagStyle}`}>
+          {tag}
+        </span>
+      ))}
+    </div>
+  </div>
+);
 
 const Experience = () => {
   return (
@@ -43,53 +108,80 @@ const Experience = () => {
         variants={stagger}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: "-80px" }}
+        viewport={{ once: true, margin: '-80px' }}
       >
-        <motion.h2 variants={fadeUp} className="section-title">Professional Journey</motion.h2>
+        <motion.p variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.18em] text-accent mb-3">
+          Experience
+        </motion.p>
+        <motion.h2 variants={fadeUp} className="section-title">
+          Professional Journey
+        </motion.h2>
         <motion.p variants={fadeUp} className="section-subtitle">
-          A track record of execution in harsh environments.
+          A track record of execution in demanding environments.
         </motion.p>
 
-        <div className="max-w-3xl mx-auto mt-12">
-          <div className="relative border-l-2 border-slate-200 pl-8 ml-4 md:ml-0 md:pl-0 md:border-none space-y-12">
+        {/* Timeline */}
+        <div className="relative mt-16">
 
-            {/* Vertical line for desktop */}
-            <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-200 -translate-x-1/2"></div>
+          {/* Desktop center line */}
+          <div className="hidden md:block absolute left-1/2 top-6 bottom-6 w-px bg-gradient-to-b from-slate-200 via-slate-200 to-transparent -translate-x-1/2 pointer-events-none" />
 
-            {experiences.map((exp, index) => (
-              <motion.div
-                key={index}
-                variants={fadeUp}
-                className="relative flex flex-col md:flex-row justify-between items-center w-full group"
-              >
-                {/* Timeline dot */}
-                <div className="absolute -left-[41px] md:left-1/2 w-5 h-5 rounded-full bg-white border-4 border-accent md:-translate-x-1/2 z-10 group-hover:scale-125 transition-transform duration-300 shadow-sm"></div>
+          {/* Mobile left border */}
+          <div className="md:hidden absolute left-5 top-0 bottom-0 w-px bg-slate-200 pointer-events-none" />
 
-                {/* Card (alternates sides on desktop) */}
-                <div className={`w-full md:w-[45%] ${index % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:pl-12 md:order-2 text-left'}`}>
-                  <div className="card border-none bg-white/80 hover:bg-white">
-                    <h3 className="text-lg font-bold text-primary mb-1.5">{exp.role}</h3>
-                    <div className={`flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wide ${index % 2 === 0 ? 'md:justify-end' : 'justify-start'}`}>
-                      <span className="flex items-center gap-1.5"><Briefcase size={12} /> {exp.company}</span>
-                      <span className="flex items-center gap-1.5"><MapPin size={12} /> {exp.location}</span>
+          <div className="space-y-10 md:space-y-14">
+            {experiences.map((exp, index) => {
+              const isLeft = index % 2 === 0;
+              const { Icon } = exp;
+
+              return (
+                <motion.div
+                  key={index}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: '-60px' }}
+                  variants={isLeft ? slideLeft : slideRight}
+                  className="relative md:grid md:grid-cols-2 md:items-center group"
+                >
+                  {/* Desktop icon dot — centered on the line */}
+                  <motion.div
+                    whileHover={{ scale: 1.12, rotate: 4 }}
+                    className={`hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-2xl ${exp.iconBg} items-center justify-center shadow-lg ring-8 ${exp.ringColor} transition-transform duration-200 cursor-default`}
+                  >
+                    <Icon size={22} className="text-white" />
+                  </motion.div>
+
+                  {/* Card on LEFT (even index) */}
+                  {isLeft && (
+                    <>
+                      <div className="hidden md:block md:pr-16 group">
+                        <ExperienceCard exp={exp} />
+                      </div>
+                      <div className="hidden md:block" />
+                    </>
+                  )}
+
+                  {/* Card on RIGHT (odd index) */}
+                  {!isLeft && (
+                    <>
+                      <div className="hidden md:block" />
+                      <div className="hidden md:block md:pl-16 group">
+                        <ExperienceCard exp={exp} />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Mobile layout — always left-to-right with icon on border */}
+                  <div className="md:hidden pl-14 group">
+                    {/* Mobile icon on left border */}
+                    <div className={`absolute left-0 top-5 w-10 h-10 rounded-xl ${exp.iconBg} flex items-center justify-center shadow-md z-10`}>
+                      <Icon size={17} className="text-white" />
                     </div>
-                    <p className="text-slate-600 leading-relaxed text-sm font-light">{exp.description}</p>
+                    <ExperienceCard exp={exp} />
                   </div>
-                </div>
-
-                {/* Center date chip (desktop) */}
-                <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center justify-center w-32 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm z-10">
-                  <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
-                    <Calendar size={11} /> {exp.date}
-                  </span>
-                </div>
-
-                {/* Mobile date */}
-                <div className="md:hidden mt-3 w-full flex items-center text-xs font-semibold text-slate-400 gap-1.5">
-                  <Calendar size={13} /> {exp.date}
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </motion.div>
