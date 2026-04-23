@@ -16,12 +16,12 @@ const skillCategories = [
   {
     title: "Engineering Tools",
     icon: <PenTool size={20} />,
-    skills: ["AutoCAD", "Total Station", "GPS Surveying", "Construction Drawings", "Site Leveling"]
+    skills: ["Civil 3D", "AutoCAD", "GPS Surveying", "Construction Drawings", "Site Leveling"]
   },
   {
     title: "Project Management",
     icon: <ClipboardCheck size={20} />,
-    skills: ["Logistics Strategy", "Team Supervision", "Safety Compliance", "Budget Estimation", "Material QC"]
+    skills: ["Document Control", "MS Excel", "Oracle", "Team Supervision", "Safety Compliance"]
   },
   {
     title: "Specialized Sites",

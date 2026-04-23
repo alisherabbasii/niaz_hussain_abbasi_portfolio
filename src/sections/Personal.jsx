@@ -47,8 +47,8 @@ const Personal = () => {
           <motion.div variants={fadeUp}>
             <Card
               icon={<BookOpen size={22} className="text-rose-500" />}
-              title="Poet"
-              description="Expressing resilience, culture, and observed human emotions through the art of poetry. Finding strict structure in creative rhythm."
+              title="Mountain Poet"
+              description="Channeling the raw beauty of mountain landscapes and the depth of human experience into verse — poetry that speaks of culture, resilience, and community."
               color="border-rose-500"
               accentBg="bg-rose-50"
             />
@@ -56,8 +56,8 @@ const Personal = () => {
           <motion.div variants={fadeUp}>
             <Card
               icon={<Users size={22} className="text-indigo-500" />}
-              title="Social Worker"
-              description="Actively volunteering and contributing to community development programs. Believing that strong structures start with strong people."
+              title="Social Activist & Worker"
+              description="Actively contributing to community awareness and development through social media and on-the-ground volunteerism, driven by the belief that strong communities are built one person at a time."
               color="border-indigo-500"
               accentBg="bg-indigo-50"
             />
@@ -66,7 +66,7 @@ const Personal = () => {
             <Card
               icon={<Video size={22} className="text-amber-500" />}
               title="YouTuber"
-              description="Sharing experiences, engineering tips, and cultural commentary to educate and entertain a growing online audience."
+              description="Creating content that shares positive messages, engineering insights, and cultural perspectives — reaching and inspiring a growing audience online."
               color="border-amber-500"
               accentBg="bg-amber-50"
             />

@@ -28,25 +28,24 @@ const About = () => {
           The Story Behind the Hard Hat
         </motion.h2>
         <motion.p variants={fadeUp} className="section-subtitle">
-          A dedicated professional with extensive experience in civil engineering and construction,
-          specifically in challenging terrains.
+          A multi-skilled professional with extensive experience in civil engineering, construction
+          supervision, and technical documentation.
         </motion.p>
 
         <motion.div variants={fadeUp} className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6 text-[1.0625rem] text-slate-600 leading-[1.75] font-light">
             <p>
-              I began my journey in engineering not just to build structures, but to overcome the most
-              demanding environments nature has to offer. My expertise lies in navigating rocky terrains,
-              managing intense blasting operations, and ensuring structural integrity where others see
-              impossible hurdles.
+              With hands-on experience as a Survey Engineer, Civil Supervisor, Blasting Supervisor,
+              and Document Controller, I have built a versatile career tackling complex construction
+              challenges — particularly in mountainous and rocky environments where precision is everything.
             </p>
             <blockquote className="border-l-4 border-accent pl-5 py-1 italic font-medium text-slate-700 text-base leading-relaxed">
-              "My philosophy revolves around precision, safety, and community impact. Every site is an
-              opportunity to uplift the environment and the people around it."
+              "Precision, safety, and community impact — every site is an opportunity to uplift both the
+              environment and the people around it."
             </blockquote>
             <p>
-              Beyond the blueprints, I am driven by a profound commitment to my community. Whether
-              through my social work, my poetry, or my digital voice, I strive to empower and inspire.
+              Beyond the blueprints, I channel the same dedication into social work, mountain poetry, and
+              digital content — using every platform available to inspire, educate, and give back.
             </p>
           </div>
 

@@ -40,8 +40,8 @@ const Contact = () => {
 
             <motion.div variants={stagger} className="space-y-5">
               {[
-                { icon: Mail, label: "Email", value: "hello@niazhussain.com", href: "mailto:hello@niazhussain.com" },
-                { icon: Phone, label: "Phone", value: "+92 300 0000000", href: "tel:+923000000000" },
+                { icon: Mail, label: "Email", value: "niazabbasi82@gmail.com", href: "mailto:niazabbasi82@gmail.com" },
+                { icon: Phone, label: "Phone", value: "+90096650621844", href: "tel:+90096650621844" },
                 { icon: MapPin, label: "Location", value: "Pakistan", href: null }
               ].map(({ icon: Icon, label, value, href }) => (
                 <motion.div key={label} variants={fadeUp} className="flex items-center gap-4 text-slate-700">

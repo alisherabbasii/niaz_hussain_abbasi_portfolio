@@ -14,25 +14,25 @@ const stagger = {
 
 const experiences = [
   {
-    role: "Senior Survey Engineer",
-    company: "Karachi Civil Division",
-    location: "Karachi, PK",
+    role: "Survey Engineer & Document Controller",
+    company: "Infrastructure Projects",
+    location: "Pakistan",
     date: "2020 - Present",
-    description: "Leading land survey operations for large-scale infrastructure projects. Specializing in topographic analysis and managing teams across difficult rocky sites.",
+    description: "Leading land survey operations for large-scale infrastructure projects while managing document control — ensuring accurate records and smooth communication between project teams using Oracle and MS Excel.",
   },
   {
     role: "Blasting Supervisor",
-    company: "Mountain Core Builders",
-    location: "Northern Mountains",
+    company: "Mountain Construction Projects",
+    location: "Northern Mountains, PK",
     date: "2016 - 2020",
-    description: "Supervised controlled detonations on steep mountainous terrain to pave paths for major highway expansions. Ensured zero safety incidents over 4 years.",
+    description: "Supervised controlled blasting operations on steep mountainous terrain, enabling major highway expansions through rocky passes while maintaining rigorous safety compliance throughout.",
   },
   {
-    role: "Civil Supervisor",
-    company: "Urban Edge Construction",
-    location: "Hyderabad, PK",
+    role: "Civil Supervisor & Drawing Expert",
+    company: "Construction Division",
+    location: "Pakistan",
     date: "2012 - 2016",
-    description: "Managed day-to-day site operations, interpreting construction drawings strictly, and organizing material logistics for commercial high-rises.",
+    description: "Managed day-to-day site operations using Civil 3D and AutoCAD construction drawings, coordinating material logistics and teams to deliver commercial and infrastructure projects with precision.",
   }
 ];
 
