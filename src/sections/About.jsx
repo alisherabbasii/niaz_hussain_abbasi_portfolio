@@ -42,7 +42,7 @@ const highlights = [
 const About = () => {
   return (
     <section id="about" className="relative">
-      <div className="absolute inset-0 bg-white/50 -skew-y-2 z-0 transform origin-top-left border-y border-slate-100"></div>
+      <div className="absolute inset-0 -skew-y-2 z-0 transform origin-top-left border-y border-slate-100/60" style={{ background: 'linear-gradient(160deg, rgba(248,250,252,0.95) 0%, rgba(255,255,255,0.92) 50%, rgba(240,249,255,0.88) 100%)' }}></div>
 
       <motion.div
         className="relative z-10"
@@ -75,7 +75,7 @@ const About = () => {
               challenges — particularly in mountainous and rocky environments where precision is non-negotiable.
             </p>
 
-            <blockquote className="relative border-l-4 border-accent pl-5 py-1">
+            <blockquote className="relative border-l-4 border-accent pl-5 py-2 rounded-r-xl" style={{ background: 'linear-gradient(90deg, rgba(14,165,233,0.06) 0%, transparent 100%)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }}>
               <span className="absolute -top-3 -left-1 text-5xl text-accent/20 font-serif leading-none select-none">"</span>
               <p className="italic font-medium text-slate-700 text-base leading-relaxed">
                 Every site is an opportunity to uplift both the environment and the people around it.
@@ -87,7 +87,7 @@ const About = () => {
               — committed to inspiring and educating my community.
             </p>
 
-            <div className="pt-2 flex items-center gap-8 text-sm font-medium text-slate-500">
+            <div className="pt-2 flex items-center gap-6 text-sm font-medium text-slate-500 rounded-2xl px-6 py-4" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,1)', border: '1px solid rgba(226,232,240,0.8)' }}>
               <div>
                 <span className="block text-2xl font-extrabold text-primary">10+</span>
                 Years on site
@@ -111,7 +111,7 @@ const About = () => {
               <motion.div
                 key={title}
                 variants={fadeUp}
-                className={`card border-l-4 ${border} flex items-start gap-5 hover:shadow-md transition-shadow duration-300`}
+                className={`card border-l-4 ${border} flex items-start gap-5`}
               >
                 <div className={`p-3 ${iconBg} ${iconColor} rounded-xl shrink-0 mt-0.5`}>
                   <Icon size={22} />

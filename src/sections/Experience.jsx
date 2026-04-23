@@ -72,7 +72,7 @@ const experiences = [
 
 const ExperienceCard = ({ exp }) => (
   <div
-    className={`card border border-slate-100 hover:border-transparent hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 group-hover:bg-white`}
+    className={`card hover:-translate-y-1.5 transition-all duration-300`}
   >
     {/* Date badge */}
     <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
@@ -146,7 +146,8 @@ const Experience = () => {
                   {/* Desktop icon dot — centered on the line */}
                   <motion.div
                     whileHover={{ scale: 1.12, rotate: 4 }}
-                    className={`hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-2xl ${exp.iconBg} items-center justify-center shadow-lg ring-8 ${exp.ringColor} transition-transform duration-200 cursor-default`}
+                    className={`hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-2xl ${exp.iconBg} items-center justify-center ring-8 ${exp.ringColor} transition-transform duration-200 cursor-default`}
+                    style={{ boxShadow: '0 6px 20px rgba(0,0,0,0.2), 0 2px 6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.25)' }}
                   >
                     <Icon size={22} className="text-white" />
                   </motion.div>
@@ -174,7 +175,7 @@ const Experience = () => {
                   {/* Mobile layout — always left-to-right with icon on border */}
                   <div className="md:hidden pl-14 group">
                     {/* Mobile icon on left border */}
-                    <div className={`absolute left-0 top-5 w-10 h-10 rounded-xl ${exp.iconBg} flex items-center justify-center shadow-md z-10`}>
+                    <div className={`absolute left-0 top-5 w-10 h-10 rounded-xl ${exp.iconBg} flex items-center justify-center z-10`} style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.1)' }}>
                       <Icon size={17} className="text-white" />
                     </div>
                     <ExperienceCard exp={exp} />

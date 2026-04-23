@@ -3,10 +3,13 @@ import { motion } from 'framer-motion';
 
 const Values = () => {
   return (
-    <section className="py-28 relative overflow-hidden bg-primary text-white">
-      {/* Background glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-full bg-accent/15 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="absolute -top-1/4 -right-1/4 w-[600px] h-[600px] bg-sky-900/40 rounded-full blur-3xl pointer-events-none"></div>
+    <section className="py-28 relative overflow-hidden text-white" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #0c1526 50%, #0f1e35 100%)' }}>
+      {/* Background layers */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 50%, rgba(14,165,233,0.12) 0%, transparent 70%)' }}></div>
+      <div className="absolute -top-1/4 -right-1/4 w-[600px] h-[600px] bg-sky-900/30 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute -bottom-1/4 -left-1/4 w-[400px] h-[400px] bg-indigo-900/20 rounded-full blur-3xl pointer-events-none"></div>
+      {/* Subtle top highlight */}
+      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(14,165,233,0.4), transparent)' }}></div>
 
       <motion.div
         className="max-w-4xl mx-auto text-center relative z-10 px-4"
@@ -24,7 +27,7 @@ const Values = () => {
         >
           My Philosophy
         </motion.p>
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-black mb-8 text-white leading-tight tracking-tight">
+        <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-black mb-8 leading-tight tracking-tight" style={{ color: 'transparent', backgroundImage: 'linear-gradient(135deg, #ffffff 0%, #e0f2fe 60%, #bae6fd 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text' }}>
           "True engineered strength isn't just in concrete, it's in the character of the community."
         </h2>
         <p className="text-base md:text-lg text-slate-400 max-w-2xl mx-auto font-light leading-relaxed">

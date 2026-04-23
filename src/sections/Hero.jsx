@@ -15,7 +15,8 @@ const stagger = {
 
 const FloatingBadge = ({ children, delay, className }) => (
   <motion.div
-    className={`absolute bg-white/90 backdrop-blur-sm px-3.5 py-2.5 rounded-2xl shadow-xl border border-white ${className}`}
+    className={`absolute bg-white/95 backdrop-blur-sm px-3.5 py-2.5 rounded-2xl border border-white/80 ${className}`}
+    style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1)' }}
     initial={{ opacity: 0, scale: 0.8, y: 10 }}
     animate={{ opacity: 1, scale: 1, y: 0 }}
     transition={{ delay, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
@@ -48,7 +49,8 @@ const Hero = () => {
         >
           <motion.div
             variants={fadeUp}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-sm font-semibold text-slate-600 mb-7 w-fit"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-slate-200/80 text-sm font-semibold text-slate-600 mb-7 w-fit"
+            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,1)' }}
           >
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
             Available for new projects
@@ -136,7 +138,7 @@ const Hero = () => {
             {/* Tilted decorative frame */}
             <div className="absolute inset-0 bg-gradient-to-tr from-accent/10 to-slate-100 rounded-[2.5rem] rotate-3 scale-105 transition-transform duration-500 group-hover:rotate-6"></div>
             {/* Image card */}
-            <div className="absolute inset-0 bg-white rounded-[2.5rem] shadow-2xl border border-slate-100/80 overflow-hidden">
+            <div className="absolute inset-0 bg-white rounded-[2.5rem] border border-slate-100/60 overflow-hidden" style={{ boxShadow: '0 24px 80px rgba(0,0,0,0.14), 0 8px 24px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.06)' }}>
               <img
                 src={niazProfileImg}
                 alt="Niaz Hussain Abbasi"
