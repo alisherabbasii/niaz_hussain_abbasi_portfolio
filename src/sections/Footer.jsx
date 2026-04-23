@@ -14,7 +14,9 @@ const Footer = () => {
 
         <div className="flex items-center gap-3">
           <a
-            href="#"
+            href="https://www.youtube.com/@NiazHussainAbbasi"
+            target="_blank"
+            rel="noopener noreferrer"
             className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 transition-all duration-200"
             aria-label="YouTube"
           >

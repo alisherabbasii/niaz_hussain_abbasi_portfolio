@@ -88,6 +88,8 @@ const ExperienceCard = ({ exp }) => (
     <h3 className="text-lg font-bold text-primary mb-1 leading-snug">{exp.role}</h3>
 
     <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wide">
+      <span className="flex items-center gap-1"><Building2 size={11} /> {exp.company}</span>
+      <span className="text-slate-200">·</span>
       <span className="flex items-center gap-1"><MapPin size={11} /> {exp.location}</span>
     </div>
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, MapPin, Layers, FileText } from 'lucide-react';
+import { ArrowRight, MapPin, Layers, FileText, Download, ChevronDown } from 'lucide-react';
 import niazProfileImg from '../assets/niaz_bhai_profile_img.png';
 
 const fadeUp = {
@@ -99,10 +99,18 @@ const Hero = () => {
             </a>
             <a
               href="#experience"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-semibold text-sm hover:border-accent/60 hover:text-accent hover:bg-accent/4 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-semibold text-sm hover:border-accent/60 hover:text-accent hover:bg-accent/5 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 w-full sm:w-auto"
             >
               View Experience
             </a>
+            {/* <a
+              href="/niaz-hussain-cv.pdf"
+              download
+              className="group inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-dashed border-slate-300 bg-transparent text-slate-500 font-semibold text-sm hover:border-accent/60 hover:text-accent hover:bg-accent/5 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 w-full sm:w-auto"
+            >
+              <Download size={15} className="group-hover:animate-bounce" />
+              Download CV
+            </a> */}
           </motion.div>
 
           <motion.div

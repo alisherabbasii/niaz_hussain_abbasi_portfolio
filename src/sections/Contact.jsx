@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, ArrowUpRight } from 'lucide-react';
 
@@ -18,8 +18,8 @@ const contactItems = [
   {
     Icon: Phone,
     label: 'Phone',
-    value: '+90096650621844',
-    href: 'tel:+90096650621844',
+    value: '+966 50 621 8449',
+    href: 'tel:+966506218449',
     iconColor: 'text-emerald-500',
     iconBg: 'bg-emerald-50',
     valueHover: 'group-hover:text-emerald-500',
@@ -70,7 +70,21 @@ const ContactCard = ({ Icon, label, value, href, iconColor, iconBg, valueHover, 
   return href ? <a href={href} className="block">{inner}</a> : inner;
 };
 
-const Contact = () => (
+const WHATSAPP_NUMBER = '966506218449';
+
+const Contact = () => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const text = `Hello, I am contacting you from your website. Name: ${name}, Message: ${message}`;
+    const encoded = encodeURIComponent(text);
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
   <section id="contact">
     <div className="rounded-[2.5rem] border border-slate-100/80 p-8 md:p-16 relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #ffffff 0%, #f8fafc 100%)', boxShadow: '0 8px 40px rgba(0,0,0,0.08), 0 2px 12px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,1)' }}>
       {/* Background decorations */}
@@ -118,11 +132,14 @@ const Contact = () => (
             <h3 className="text-lg font-bold text-primary mb-1">Send a Message</h3>
             <p className="text-sm text-slate-400 font-light mb-7">I typically respond within 24 hours.</p>
 
-            <form className="space-y-5">
+            <form className="space-y-5" onSubmit={handleSubmit}>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-2">Name</label>
                 <input
                   type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent bg-white transition-all text-sm text-slate-800 placeholder:text-slate-300"
                   style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04), inset 0 2px 4px rgba(0,0,0,0.03)' }}
                   placeholder="John Doe"
@@ -132,6 +149,8 @@ const Contact = () => (
                 <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-2">Email</label>
                 <input
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent bg-white transition-all text-sm text-slate-800 placeholder:text-slate-300"
                   style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04), inset 0 2px 4px rgba(0,0,0,0.03)' }}
                   placeholder="john@example.com"
@@ -141,12 +160,15 @@ const Contact = () => (
                 <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-2">Message</label>
                 <textarea
                   rows={5}
+                  required
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent bg-white transition-all resize-none text-sm text-slate-800 placeholder:text-slate-300"
                   style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04), inset 0 2px 4px rgba(0,0,0,0.03)' }}
                   placeholder="Tell me about your project..."
                 />
               </div>
-              <button type="button" className="w-full btn-primary justify-center mt-1 group">
+              <button type="submit" className="w-full btn-primary justify-center mt-1 group">
                 Send Message
                 <Send size={16} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
               </button>
@@ -156,6 +178,7 @@ const Contact = () => (
       </div>
     </div>
   </section>
-);
+  );
+};
 
 export default Contact;
