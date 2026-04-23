@@ -48,7 +48,7 @@ const Card = ({ Icon, title, description, tag, gradient, cardBg, iconBg, glow, b
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true, margin: '-40px' }}
     transition={{ duration: 0.55, delay: index * 0.12, ease: [0.22, 1, 0.36, 1] }}
-    whileHover={{ y: -10, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } }}
+    whileHover={{ y: -8, scale: 1.02, transition: { type: 'spring', stiffness: 300, damping: 22 } }}
     style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.8)' }}
   >
     {/* Hover glow overlay */}
@@ -71,7 +71,7 @@ const Card = ({ Icon, title, description, tag, gradient, cardBg, iconBg, glow, b
     </div>
 
     <h3 className="text-xl font-bold mb-3 text-slate-800">{title}</h3>
-    <p className="text-slate-500 leading-relaxed text-sm font-light">{description}</p>
+    <p className="text-slate-500 leading-[1.7] text-[0.9375rem] font-light">{description}</p>
 
     {/* Bottom gradient bar */}
     <div className={`absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r ${gradient} opacity-60 group-hover:opacity-100 transition-opacity duration-300`} />

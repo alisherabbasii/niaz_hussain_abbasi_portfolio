@@ -97,15 +97,16 @@ const CategoryCard = ({ cat }) => {
       variants={fadeUp}
       className="rounded-2xl border border-slate-100/80 overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1"
       style={{ background: 'linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)', boxShadow: '0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,1)' }}
-      whileHover={{ boxShadow: '0 12px 32px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1)' }}
+      whileHover={{ scale: 1.02, y: -5, boxShadow: '0 12px 32px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1)' }}
+      transition={{ type: 'spring', stiffness: 280, damping: 22 }}
     >
       {/* Card header */}
       <div className={`bg-gradient-to-br ${cat.headerGradient} px-6 pt-7 pb-6`}>
         <div className={`w-12 h-12 ${cat.iconBg} rounded-2xl flex items-center justify-center mb-4`} style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.2), 0 1px 4px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.25)' }}>
           <CategoryIcon size={22} className="text-white" />
         </div>
-        <h3 className="text-base font-bold text-primary mb-1">{cat.title}</h3>
-        <p className="text-xs text-slate-500 font-light leading-relaxed">{cat.subtitle}</p>
+        <h3 className="text-lg font-bold text-primary mb-1">{cat.title}</h3>
+        <p className="text-sm text-slate-500 font-light leading-[1.65]">{cat.subtitle}</p>
       </div>
 
       {/* Divider */}

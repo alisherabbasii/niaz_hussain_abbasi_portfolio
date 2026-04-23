@@ -69,7 +69,7 @@ const About = () => {
 
           {/* Left — short story */}
           <motion.div variants={fadeUp} className="space-y-6">
-            <p className="text-[1.0625rem] text-slate-600 leading-[1.8] font-light">
+            <p className="text-[1.0625rem] text-slate-600 leading-[1.75] font-light">
               With hands-on experience as a Survey Engineer, Civil Supervisor, Blasting Supervisor,
               and Document Controller, I have built a versatile career tackling complex construction
               challenges — particularly in mountainous and rocky environments where precision is non-negotiable.
@@ -82,7 +82,7 @@ const About = () => {
               </p>
             </blockquote>
 
-            <p className="text-[1.0625rem] text-slate-600 leading-[1.8] font-light">
+            <p className="text-[1.0625rem] text-slate-600 leading-[1.75] font-light">
               Beyond the blueprints, I give back through social work, mountain poetry, and digital content
               — committed to inspiring and educating my community.
             </p>
@@ -111,14 +111,16 @@ const About = () => {
               <motion.div
                 key={title}
                 variants={fadeUp}
+                whileHover={{ scale: 1.03, y: -5 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
                 className={`card border-l-4 ${border} flex items-start gap-5`}
               >
                 <div className={`p-3 ${iconBg} ${iconColor} rounded-xl shrink-0 mt-0.5`}>
                   <Icon size={22} />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-primary mb-1.5">{title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed font-light">{description}</p>
+                  <h3 className="text-lg font-bold text-primary mb-1.5">{title}</h3>
+                  <p className="text-sm text-slate-500 leading-[1.7] font-light">{description}</p>
                 </div>
               </motion.div>
             ))}

@@ -71,8 +71,10 @@ const experiences = [
 ];
 
 const ExperienceCard = ({ exp }) => (
-  <div
-    className={`card hover:-translate-y-1.5 transition-all duration-300`}
+  <motion.div
+    className="card"
+    whileHover={{ y: -6, scale: 1.02 }}
+    transition={{ type: 'spring', stiffness: 300, damping: 22 }}
   >
     {/* Date badge */}
     <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
@@ -83,13 +85,13 @@ const ExperienceCard = ({ exp }) => (
       <span className="text-xs text-slate-400 font-semibold">{exp.duration}</span>
     </div>
 
-    <h3 className="text-base font-bold text-primary mb-1 leading-snug">{exp.role}</h3>
+    <h3 className="text-lg font-bold text-primary mb-1 leading-snug">{exp.role}</h3>
 
     <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wide">
       <span className="flex items-center gap-1"><MapPin size={11} /> {exp.location}</span>
     </div>
 
-    <p className="text-sm text-slate-500 leading-relaxed font-light mb-4">{exp.description}</p>
+    <p className="text-sm text-slate-500 leading-[1.7] font-light mb-4">{exp.description}</p>
 
     <div className="flex flex-wrap gap-2">
       {exp.tags.map((tag) => (
@@ -98,7 +100,7 @@ const ExperienceCard = ({ exp }) => (
         </span>
       ))}
     </div>
-  </div>
+  </motion.div>
 );
 
 const Experience = () => {

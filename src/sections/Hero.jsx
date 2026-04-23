@@ -13,6 +13,7 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.11 } }
 };
 
+
 const FloatingBadge = ({ children, delay, className }) => (
   <motion.div
     className={`absolute bg-white/95 backdrop-blur-sm px-3.5 py-2.5 rounded-2xl border border-white/80 ${className}`}
