@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronRight } from 'lucide-react';
 import { Button } from './ui';
@@ -12,19 +13,19 @@ const MOBILE_MENU_ID = 'mobile-nav-menu';
 // text link (the wordmark covers it) but is still tracked so scroll-spy
 // resolves correctly instead of leaving the previous item highlighted while
 // the hero is in view.
+//
+// `type: 'section'` links point at a homepage section id (scroll-spied,
+// cross-page nav goes to `/#id`). `type: 'route'` links point at a real
+// route and are "active" based on the current pathname instead.
 const NAV_LINKS = [
-  { id: 'home', label: 'Home', showInNav: false },
-  { id: 'about', label: 'About', showInNav: true },
-  { id: 'experience', label: 'Experience', showInNav: true },
-  { id: 'skills', label: 'Expertise', showInNav: true },
-  { id: 'work', label: 'Work', showInNav: true },
-  { id: 'personal', label: 'Personal', showInNav: true },
+  { id: 'home', label: 'Home', showInNav: false, type: 'section' },
+  { id: 'about', label: 'About', showInNav: true, type: 'section' },
+  { id: 'experience', label: 'Experience', showInNav: true, type: 'section' },
+  { id: 'skills', label: 'Expertise', showInNav: true, type: 'section' },
+  { id: 'work', label: 'Work', showInNav: true, type: 'section' },
+  { id: 'personal', label: 'Personal', showInNav: true, type: 'section' },
+  { id: 'blog', label: 'Blog', showInNav: true, type: 'route', to: '/blog' },
 ];
-
-// Implementation note: no /blog route exists yet (no router is installed and
-// there's no blog section/page in src/sections). Add a `{ id: 'blog', label:
-// 'Blog', showInNav: true }` entry here once that content and its routing
-// ship — wiring it in now would point the nav at a dead link.
 
 // Education and Certifications (src/sections/Education.jsx,
 // src/sections/Certifications.jsx) render nothing until their data files
@@ -33,21 +34,13 @@ const NAV_LINKS = [
 
 const CTA = { id: 'contact', label: "Let's Talk" };
 
-const TRACKED_IDS = [...NAV_LINKS.map((link) => link.id), CTA.id];
-
-// Same-page navigation lands the browser on the target section but leaves
-// focus behind on the link that was clicked. Making the destination
-// programmatically focusable (mirroring the #main-content skip-link pattern
-// already used in App.jsx) means keyboard/screen-reader users actually land
-// where they navigated instead of silently staying put.
-const focusSection = (id) => {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
-  el.focus({ preventScroll: true });
-};
+const SECTION_IDS = NAV_LINKS.filter((link) => link.type === 'section').map((link) => link.id).concat(CTA.id);
 
 const Navbar = () => {
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+  const homeHref = (id) => (isHome ? `#${id}` : `/#${id}`);
+
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeId, setActiveId] = useState('home');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -70,9 +63,16 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Navbar stays mounted across route changes (only the routed page content
+  // swaps), so this has to re-attach whenever the pathname changes — not
+  // just once on first mount — otherwise scroll-spy silently stops working
+  // the moment a visitor lands on Home via client-side navigation instead
+  // of a hard page load.
   useEffect(() => {
-    const elements = TRACKED_IDS.map((id) => document.getElementById(id)).filter(Boolean);
-    if (!elements.length) return;
+    if (!isHome) return undefined;
+
+    const elements = SECTION_IDS.map((id) => document.getElementById(id)).filter(Boolean);
+    if (!elements.length) return undefined;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -88,20 +88,15 @@ const Navbar = () => {
 
     elements.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, []);
+  }, [isHome, location.pathname]);
 
   const closeAndRestoreFocus = useCallback(() => {
     setIsMobileMenuOpen(false);
     toggleButtonRef.current?.focus();
   }, []);
 
-  const handleNavClick = useCallback((id) => {
+  const closeMobileMenu = useCallback(() => {
     setIsMobileMenuOpen(false);
-    if ('onscrollend' in window) {
-      window.addEventListener('scrollend', () => focusSection(id), { once: true });
-    } else {
-      window.setTimeout(() => focusSection(id), 500);
-    }
   }, []);
 
   // Body scroll lock + Escape-to-close + focus trap while the mobile panel
@@ -149,6 +144,9 @@ const Navbar = () => {
 
   const visibleLinks = NAV_LINKS.filter((link) => link.showInNav);
 
+  const isLinkActive = (link) =>
+    link.type === 'route' ? location.pathname.startsWith(link.to) : isHome && activeId === link.id;
+
   return (
     <nav
       aria-label="Primary"
@@ -160,24 +158,22 @@ const Navbar = () => {
       )}
     >
       <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-16 h-20 flex items-center justify-between">
-        <a
-          href="#home"
-          onClick={() => handleNavClick('home')}
+        <Link
+          to={homeHref('home')}
           className="text-xl font-heading font-black text-primary tracking-tight shrink-0 py-2.5"
         >
           Niaz<span className="text-accent-strong">Hussain.</span>
-        </a>
+        </Link>
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-6">
           <ul className="flex items-center gap-1">
             {visibleLinks.map((link) => {
-              const isActive = activeId === link.id;
+              const isActive = isLinkActive(link);
               return (
                 <li key={link.id}>
-                  <a
-                    href={`#${link.id}`}
-                    onClick={() => handleNavClick(link.id)}
+                  <Link
+                    to={link.type === 'route' ? link.to : homeHref(link.id)}
                     aria-current={isActive ? 'true' : undefined}
                     className={cn(
                       'relative px-3.5 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200',
@@ -192,12 +188,12 @@ const Navbar = () => {
                         transition={{ duration: 0.3, ease: EASE_PREMIUM }}
                       />
                     )}
-                  </a>
+                  </Link>
                 </li>
               );
             })}
           </ul>
-          <Button href={`#${CTA.id}`} onClick={() => handleNavClick(CTA.id)} size="sm">
+          <Button to={homeHref(CTA.id)} size="sm">
             {CTA.label}
           </Button>
         </div>
@@ -245,26 +241,26 @@ const Navbar = () => {
             >
               <ul className="py-3 px-4 flex flex-col gap-1">
                 {visibleLinks.map((link) => {
-                  const isActive = activeId === link.id;
+                  const isActive = isLinkActive(link);
                   return (
                     <li key={link.id}>
-                      <a
-                        href={`#${link.id}`}
+                      <Link
+                        to={link.type === 'route' ? link.to : homeHref(link.id)}
                         aria-current={isActive ? 'true' : undefined}
                         className={cn(
                           'flex items-center justify-between py-3 px-4 rounded-xl font-medium transition-all text-sm',
                           isActive ? 'bg-sky-50 text-accent-strong' : 'text-slate-700 hover:bg-slate-50 hover:text-accent-strong'
                         )}
-                        onClick={() => handleNavClick(link.id)}
+                        onClick={closeMobileMenu}
                       >
                         {link.label}
                         <ChevronRight size={15} className={isActive ? 'text-accent-strong' : 'text-slate-400'} aria-hidden="true" />
-                      </a>
+                      </Link>
                     </li>
                   );
                 })}
                 <li className="pt-2 pb-1">
-                  <Button href={`#${CTA.id}`} onClick={() => handleNavClick(CTA.id)} fullWidth>
+                  <Button to={homeHref(CTA.id)} onClick={closeMobileMenu} fullWidth>
                     {CTA.label}
                   </Button>
                 </li>

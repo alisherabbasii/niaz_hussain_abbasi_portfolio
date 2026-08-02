@@ -1,3 +1,4 @@
+import { Link, useLocation } from 'react-router-dom';
 import { Play, Share2, Link as LinkIcon } from 'lucide-react';
 import { SocialLink } from '../components/ui';
 
@@ -23,13 +24,16 @@ const socialLinks = [
 ];
 
 const Footer = () => {
+  const location = useLocation();
+  const homeHref = location.pathname === '/' ? '#home' : '/#home';
+
   return (
     <footer className="bg-white border-t border-slate-100 py-14 px-4">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
         <div className="text-center md:text-left">
-          <a href="#home" className="inline-block text-xl font-heading font-black text-primary tracking-tight py-2.5 mb-1.5">
+          <Link to={homeHref} className="inline-block text-xl font-heading font-black text-primary tracking-tight py-2.5 mb-1.5">
             Niaz<span className="text-accent-strong">Hussain.</span>
-          </a>
+          </Link>
           <p className="text-slate-500 text-sm font-medium">Building with precision and purpose.</p>
         </div>
 
@@ -40,8 +44,12 @@ const Footer = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto mt-8 pt-8 border-t border-slate-100 text-center text-xs text-slate-500 font-medium tracking-wide">
-        © {new Date().getFullYear()} Niaz Hussain Abbasi. All rights reserved.
+      <div className="max-w-7xl mx-auto mt-8 pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center text-xs text-slate-500 font-medium tracking-wide">
+        <span>© {new Date().getFullYear()} Niaz Hussain Abbasi. All rights reserved.</span>
+        <span className="hidden sm:inline text-slate-300" aria-hidden="true">·</span>
+        <Link to="/privacy-policy" className="hover:text-accent-strong transition-colors">
+          Privacy Policy
+        </Link>
       </div>
     </footer>
   );

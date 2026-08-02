@@ -1,0 +1,24 @@
+# SPA fallback for client-side routing (React Router) on Hostinger's Apache
+# hosting. See docs/03-DEPLOYMENT.md for the full explanation.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Anything that maps to a real file or directory is served as-is:
+  # /assets/*.js, /favicon.png, /robots.txt, /sitemap.xml, etc. are all
+  # untouched by the rule below.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Everything else that looks like an app route (no file extension in the
+  # last path segment) falls back to index.html so React Router can render
+  # it client-side — this is what makes direct loads/refreshes of routes
+  # like /blog and /blog/example-slug work.
+  #
+  # A request that *does* have an extension (e.g. a mistyped or missing
+  # /assets/foo.js) is deliberately left alone here, so it 404s normally
+  # instead of silently serving the SPA shell.
+  RewriteCond %{REQUEST_URI} !\.[a-zA-Z0-9]{1,8}$
+  RewriteRule ^ index.html [L]
+</IfModule>

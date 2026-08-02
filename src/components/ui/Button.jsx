@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 
 const VARIANT_CLASSES = {
@@ -12,14 +13,17 @@ const SIZE_CLASSES = {
 };
 
 /**
- * Renders an <a> when `href` is passed, otherwise a <button>. Variants map
- * onto the .btn-primary/.btn-outline/.btn-ghost classes in index.css so
- * button styling stays centralized in one place (see docs/01-WEBSITE-AUDIT-AND-ROADMAP.md §10.5).
+ * Renders a router <Link> when `to` is passed (client-side route
+ * navigation), an <a> when `href` is passed (same-page anchors/external
+ * links), otherwise a <button>. Variants map onto the .btn-primary/
+ * .btn-outline/.btn-ghost classes in index.css so button styling stays
+ * centralized in one place (see docs/01-WEBSITE-AUDIT-AND-ROADMAP.md §10.5).
  */
 const Button = ({
   variant = 'primary',
   size = 'md',
   href,
+  to,
   icon: Icon,
   iconPosition = 'trailing',
   fullWidth = false,
@@ -42,6 +46,14 @@ const Button = ({
       {Icon && iconPosition === 'trailing' && <Icon size={16} className="shrink-0 transition-transform duration-200 group-hover:translate-x-1" />}
     </>
   );
+
+  if (to) {
+    return (
+      <Link to={to} className={classes} {...props}>
+        {content}
+      </Link>
+    );
+  }
 
   if (href) {
     return (
