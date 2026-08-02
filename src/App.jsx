@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { MotionConfig } from 'framer-motion';
 import Navbar from './components/Navbar';
 import { SkipToContent } from './components/ui';
@@ -13,7 +14,15 @@ import Values from './sections/Values';
 import Contact from './sections/Contact';
 import Footer from './sections/Footer';
 
+// A direct load of a URL with a hash (e.g. a shared link to #experience) fires
+// the browser's native anchor-scroll before React has mounted the target
+// section, so it silently fails. Retry it once the page has rendered.
 function App() {
+  useEffect(() => {
+    if (!window.location.hash) return;
+    document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
+  }, []);
+
   return (
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen bg-secondary selection:bg-accent/20 selection:text-accent-dark">

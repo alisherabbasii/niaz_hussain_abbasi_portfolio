@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, ArrowUpRight } from 'lucide-react';
 import { Input, Textarea } from '../components/ui';
+import { fadeUp, stagger, viewportOnce } from '../utils/motion';
 
 const contactItems = [
   {
@@ -42,15 +43,12 @@ const contactItems = [
   },
 ];
 
-const ContactCard = ({ Icon, label, value, href, iconColor, iconBg, valueHover, hoverBorder, hoverShadow, arrowColor, index }) => {
+const ContactCard = ({ Icon, label, value, href, iconColor, iconBg, valueHover, hoverBorder, hoverShadow, arrowColor }) => {
   const inner = (
     <motion.div
-      className={`flex items-center gap-4 p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-lg ${hoverShadow} ${hoverBorder} transition-all duration-300 group`}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.45, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+      variants={fadeUp}
       whileHover={{ y: -4 }}
+      className={`flex items-center gap-4 p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-lg ${hoverShadow} ${hoverBorder} transition-all duration-300 group`}
     >
       <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center ${iconColor} shrink-0 group-hover:scale-110 transition-transform duration-300`}>
         <Icon size={20} />
@@ -73,7 +71,11 @@ const ContactCard = ({ Icon, label, value, href, iconColor, iconBg, valueHover, 
 
 const WHATSAPP_NUMBER = '966506218449';
 
-const Contact = () => {
+/**
+ * Own component so keystroke-driven state updates only re-render the form
+ * itself, not the sibling contact-card column and its motion wrappers.
+ */
+const ContactForm = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -86,21 +88,56 @@ const Contact = () => {
   };
 
   return (
+    <div className="rounded-2xl p-8 border border-slate-100/80" style={{ background: 'linear-gradient(160deg, #f8fafc 0%, #f1f5f9 100%)', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8)' }}>
+      <h3 className="text-lg font-bold text-primary mb-1">Send a Message</h3>
+      <p className="text-sm text-slate-500 font-light mb-7">I typically respond within 24 hours.</p>
+
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <Input
+          id="contact-name"
+          label="Name"
+          type="text"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="John Doe"
+        />
+        <Input
+          id="contact-email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="john@example.com"
+        />
+        <Textarea
+          id="contact-message"
+          label="Message"
+          required
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Tell me about your project..."
+        />
+        <button type="submit" className="w-full btn-primary justify-center mt-1 group">
+          Send Message
+          <Send size={16} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
+        </button>
+      </form>
+    </div>
+  );
+};
+
+const Contact = () => (
   <section id="contact">
     <div className="rounded-[2.5rem] border border-slate-100/80 p-8 md:p-16 relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #ffffff 0%, #f8fafc 100%)', boxShadow: '0 8px 40px rgba(0,0,0,0.08), 0 2px 12px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,1)' }}>
       {/* Background decorations */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none translate-x-1/3 -translate-y-1/3" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-slate-100 rounded-full blur-3xl pointer-events-none -translate-x-1/3 translate-y-1/3" />
 
-      <div className="grid lg:grid-cols-2 gap-14 relative z-10 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 relative z-10 items-start">
 
         {/* Left — CTA + contact cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-60px' }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-        >
+        <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={viewportOnce}>
           <p className="eyebrow mb-5">Get In Touch</p>
 
           <h2 className="text-4xl md:text-5xl font-extrabold text-primary mb-4 tracking-tight leading-[1.1]">
@@ -115,61 +152,20 @@ const Contact = () => {
             precision — I'm ready to bring your vision to life.
           </p>
 
-          <div className="space-y-3">
-            {contactItems.map((item, i) => (
-              <ContactCard key={item.label} {...item} index={i} />
+          <motion.div className="space-y-3" variants={stagger(0.1)} initial="hidden" whileInView="visible" viewport={viewportOnce}>
+            {contactItems.map((item) => (
+              <ContactCard key={item.label} {...item} />
             ))}
-          </div>
+          </motion.div>
         </motion.div>
 
         {/* Right — form */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-60px' }}
-          transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <div className="rounded-2xl p-8 border border-slate-100/80" style={{ background: 'linear-gradient(160deg, #f8fafc 0%, #f1f5f9 100%)', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8)' }}>
-            <h3 className="text-lg font-bold text-primary mb-1">Send a Message</h3>
-            <p className="text-sm text-slate-500 font-light mb-7">I typically respond within 24 hours.</p>
-
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              <Input
-                id="contact-name"
-                label="Name"
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
-              />
-              <Input
-                id="contact-email"
-                label="Email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="john@example.com"
-              />
-              <Textarea
-                id="contact-message"
-                label="Message"
-                required
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Tell me about your project..."
-              />
-              <button type="submit" className="w-full btn-primary justify-center mt-1 group">
-                Send Message
-                <Send size={16} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
-              </button>
-            </form>
-          </div>
+        <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={viewportOnce}>
+          <ContactForm />
         </motion.div>
       </div>
     </div>
   </section>
-  );
-};
+);
 
 export default Contact;

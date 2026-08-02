@@ -47,8 +47,9 @@ const ExperienceCard = ({ role }) => {
 
       <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">
         <span className="flex items-center gap-1"><Building2 size={11} aria-hidden="true" /> {role.company}</span>
-        <span className="text-slate-200" aria-hidden="true">·</span>
-        <span className="flex items-center gap-1"><MapPin size={11} aria-hidden="true" /> {role.location}</span>
+        <span className="flex items-center gap-1 before:content-['·'] before:text-slate-300 before:mr-3">
+          <MapPin size={11} aria-hidden="true" /> {role.location}
+        </span>
       </div>
 
       <p className="text-sm text-slate-500 leading-[1.7] font-light mb-4">{role.description}</p>

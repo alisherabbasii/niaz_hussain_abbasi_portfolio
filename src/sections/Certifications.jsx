@@ -21,7 +21,7 @@ const Certifications = () => {
       subtitle="Professional credentials and issuing bodies."
     >
       <motion.div
-        className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-12"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-12"
         variants={stagger()}
         initial="hidden"
         whileInView="visible"

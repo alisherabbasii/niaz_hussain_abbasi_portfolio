@@ -1,16 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, ArrowUpRight, Ruler, HardHat, ClipboardList } from 'lucide-react';
 import { Button } from '../components/ui';
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } }
-};
-
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.13, delayChildren: 0.05 } }
-};
+import { fadeUp, stagger, viewportOnce } from '../utils/motion';
 
 const approach = [
   {
@@ -37,10 +28,10 @@ const About = () => {
 
       <motion.div
         className="relative z-10"
-        variants={stagger}
+        variants={stagger(0.13, 0.05)}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: '-80px' }}
+        viewport={viewportOnce}
       >
         {/* Section header */}
         <div className="max-w-2xl mb-14">
@@ -57,7 +48,7 @@ const About = () => {
         </div>
 
         {/* Asymmetric body: biography (left) vs. working approach (right) */}
-        <div className="grid lg:grid-cols-[1.3fr_1fr] gap-14 lg:gap-16 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-14 lg:gap-16 items-start">
 
           {/* Left — biography, credentials-in-prose, CTA */}
           <motion.div variants={fadeUp} className="space-y-8">

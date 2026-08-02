@@ -26,10 +26,10 @@ const Hero = () => {
         }}
       />
 
-      <div className="w-full grid lg:grid-cols-[1.15fr_1fr] gap-12 lg:gap-16 items-center">
+      <div className="w-full grid grid-cols-1 md:grid-cols-[1.15fr_1fr] gap-12 lg:gap-16 items-center">
         {/* Left: copy */}
         <motion.div
-          className="flex flex-col items-start text-left order-2 lg:order-1"
+          className="flex flex-col items-start text-left order-2 md:order-1"
           variants={stagger(0.09, 0.05)}
           initial="hidden"
           animate="visible"
@@ -86,7 +86,7 @@ const Hero = () => {
 
         {/* Right: portrait */}
         <motion.div
-          className="order-1 lg:order-2 flex justify-center lg:justify-end"
+          className="order-1 md:order-2 flex justify-center md:justify-end"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15, ease: EASE_PREMIUM }}

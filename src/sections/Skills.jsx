@@ -32,7 +32,7 @@ const CategoryRow = ({ category }) => {
   return (
     <motion.div
       variants={fadeUp}
-      className="grid lg:grid-cols-[280px_1fr] gap-5 lg:gap-10 py-8 first:pt-0 last:pb-0"
+      className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-5 lg:gap-10 py-8 first:pt-0 last:pb-0"
     >
       <div className="flex items-start gap-4">
         <div className={`w-11 h-11 rounded-xl ${theme.iconBg} ${theme.iconColor} flex items-center justify-center shrink-0`}>

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { BookOpen, Users, Video } from 'lucide-react';
+import { fadeUp, fadeIn, stagger, viewportOnce } from '../utils/motion';
 
 const cards = [
   {
@@ -40,13 +41,10 @@ const cards = [
   },
 ];
 
-const Card = ({ Icon, title, description, tag, gradient, cardBg, iconBg, glow, blob, index }) => (
+const Card = ({ Icon, title, description, tag, gradient, cardBg, iconBg, glow, blob }) => (
   <motion.div
     className={`relative rounded-3xl p-7 bg-gradient-to-br ${cardBg} backdrop-blur-sm border border-white/80 overflow-hidden group cursor-default`}
-    initial={{ opacity: 0, y: 40 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: '-40px' }}
-    transition={{ duration: 0.55, delay: index * 0.12, ease: [0.22, 1, 0.36, 1] }}
+    variants={fadeUp}
     whileHover={{ y: -8, scale: 1.02, transition: { type: 'spring', stiffness: 300, damping: 22 } }}
     style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.8)' }}
   >
@@ -88,18 +86,13 @@ const Personal = () => (
     <div className="absolute -bottom-16 -left-16 w-80 h-80 bg-rose-200/50 rounded-full blur-3xl pointer-events-none" />
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-amber-200/30 rounded-full blur-2xl pointer-events-none" />
 
-    <div className="relative z-10">
-      <motion.p
-        className="text-xs font-bold uppercase tracking-[0.2em] text-violet-500 text-center mb-4"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        viewport={{ once: true }}
-      >
+    <motion.div className="relative z-10" variants={stagger()} initial="hidden" whileInView="visible" viewport={viewportOnce}>
+      <motion.p variants={fadeIn} className="text-xs font-bold uppercase tracking-[0.2em] text-violet-500 text-center mb-4">
         The Human Side
       </motion.p>
 
       <motion.h2
+        variants={fadeUp}
         className="section-title"
         style={{
           background: 'linear-gradient(135deg, #7c3aed 0%, #db2777 50%, #d97706 100%)',
@@ -107,30 +100,20 @@ const Personal = () => (
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
         }}
-        initial={{ opacity: 0, y: 24 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: '-80px' }}
-        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       >
         Beyond Engineering
       </motion.h2>
 
-      <motion.p
-        className="section-subtitle"
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-      >
+      <motion.p variants={fadeUp} className="section-subtitle">
         Passions that define the person behind the profession.
       </motion.p>
 
-      <div className="grid md:grid-cols-3 gap-8 mt-4">
-        {cards.map((card, i) => (
-          <Card key={card.title} {...card} index={i} />
+      <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-4" variants={stagger()}>
+        {cards.map((card) => (
+          <Card key={card.title} {...card} />
         ))}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   </section>
 );
 
