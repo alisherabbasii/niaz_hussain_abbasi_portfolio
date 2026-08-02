@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Target, HardHat, Compass } from 'lucide-react';
 
@@ -53,7 +52,7 @@ const About = () => {
       >
         {/* Section header */}
         <div className="max-w-2xl mb-14">
-          <motion.p variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.18em] text-accent mb-3">
+          <motion.p variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.18em] text-accent-strong mb-3">
             About
           </motion.p>
           <motion.h2 variants={fadeUp} className="section-title !mb-4">

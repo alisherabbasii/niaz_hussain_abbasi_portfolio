@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { Mountain, Building2, Waves, ArrowUpRight } from 'lucide-react';
 
@@ -130,7 +129,7 @@ const WorkHighlights = () => {
         whileInView="visible"
         viewport={{ once: true, margin: '-80px' }}
       >
-        <motion.p variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.18em] text-accent mb-3">
+        <motion.p variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.18em] text-accent-strong mb-3">
           Work
         </motion.p>
         <motion.h2 variants={fadeUp} className="section-title">

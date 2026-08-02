@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, ArrowUpRight } from 'lucide-react';
+import { Input, Textarea } from '../components/ui';
 
 const contactItems = [
   {
@@ -55,7 +56,7 @@ const ContactCard = ({ Icon, label, value, href, iconColor, iconBg, valueHover, 
         <Icon size={20} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 mb-0.5">{label}</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-0.5">{label}</p>
         <p className={`text-sm font-semibold text-slate-800 truncate transition-colors duration-300 ${valueHover}`}>{value}</p>
       </div>
       {href && (
@@ -100,13 +101,13 @@ const Contact = () => {
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
         >
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent mb-5">Get In Touch</p>
+          <p className="eyebrow mb-5">Get In Touch</p>
 
           <h2 className="text-4xl md:text-5xl font-extrabold text-primary mb-4 tracking-tight leading-[1.1]">
             Got a project
             <br />
             in mind?{' '}
-            <span className="text-accent">Let's talk.</span>
+            <span className="text-accent-strong">Let's talk.</span>
           </h2>
 
           <p className="text-base text-slate-500 mb-10 font-light leading-relaxed max-w-sm">
@@ -130,44 +131,34 @@ const Contact = () => {
         >
           <div className="rounded-2xl p-8 border border-slate-100/80" style={{ background: 'linear-gradient(160deg, #f8fafc 0%, #f1f5f9 100%)', boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.8)' }}>
             <h3 className="text-lg font-bold text-primary mb-1">Send a Message</h3>
-            <p className="text-sm text-slate-400 font-light mb-7">I typically respond within 24 hours.</p>
+            <p className="text-sm text-slate-500 font-light mb-7">I typically respond within 24 hours.</p>
 
             <form className="space-y-5" onSubmit={handleSubmit}>
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-2">Name</label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent bg-white transition-all text-sm text-slate-800 placeholder:text-slate-300"
-                  style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04), inset 0 2px 4px rgba(0,0,0,0.03)' }}
-                  placeholder="John Doe"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent bg-white transition-all text-sm text-slate-800 placeholder:text-slate-300"
-                  style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04), inset 0 2px 4px rgba(0,0,0,0.03)' }}
-                  placeholder="john@example.com"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 mb-2">Message</label>
-                <textarea
-                  rows={5}
-                  required
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent bg-white transition-all resize-none text-sm text-slate-800 placeholder:text-slate-300"
-                  style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04), inset 0 2px 4px rgba(0,0,0,0.03)' }}
-                  placeholder="Tell me about your project..."
-                />
-              </div>
+              <Input
+                id="contact-name"
+                label="Name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+              />
+              <Input
+                id="contact-email"
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="john@example.com"
+              />
+              <Textarea
+                id="contact-message"
+                label="Message"
+                required
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Tell me about your project..."
+              />
               <button type="submit" className="w-full btn-primary justify-center mt-1 group">
                 Send Message
                 <Send size={16} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />

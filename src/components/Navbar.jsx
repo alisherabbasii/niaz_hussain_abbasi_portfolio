@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronRight } from 'lucide-react';
+
+const MOBILE_MENU_ID = 'mobile-nav-menu';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -21,12 +23,12 @@ const Navbar = () => {
   ];
 
   return (
-    <nav style={isScrolled ? { boxShadow: '0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)' } : {}} className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled ? 'bg-white/90 backdrop-blur-md border-b border-slate-100/60 py-3' : 'bg-transparent py-5'
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      isScrolled ? 'bg-white/90 backdrop-blur-md border-b border-slate-100/60 py-3 shadow-sm' : 'bg-transparent py-5'
     }`}>
       <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-16 flex items-center justify-between">
         <a href="#" className="text-xl font-heading font-black text-primary tracking-tight">
-          Niaz<span className="text-accent">Hussain.</span>
+          Niaz<span className="text-accent-strong">Hussain.</span>
         </a>
 
         {/* Desktop Nav */}
@@ -53,6 +55,8 @@ const Navbar = () => {
           className="md:hidden text-primary p-2 rounded-lg hover:bg-slate-100 transition-colors"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Toggle menu"
+          aria-expanded={isMobileMenuOpen}
+          aria-controls={MOBILE_MENU_ID}
         >
           {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
@@ -62,6 +66,7 @@ const Navbar = () => {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
+            id={MOBILE_MENU_ID}
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}

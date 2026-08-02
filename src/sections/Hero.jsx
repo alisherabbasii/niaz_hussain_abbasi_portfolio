@@ -1,6 +1,5 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, MapPin, Layers, FileText, Download, ChevronDown } from 'lucide-react';
+import { ArrowRight, MapPin, Layers, FileText } from 'lucide-react';
 import niazProfileImg from '../assets/niaz_bhai_profile_img.png';
 
 const fadeUp = {
@@ -77,7 +76,7 @@ const Hero = () => {
 
           <motion.p
             variants={fadeUp}
-            className="text-xs font-bold uppercase tracking-[0.18em] text-accent mb-6"
+            className="text-xs font-bold uppercase tracking-[0.18em] text-accent-strong mb-6"
           >
             Civil Engineer · Survey Engineer · Document Controller
           </motion.p>
@@ -103,14 +102,6 @@ const Hero = () => {
             >
               View Experience
             </a>
-            {/* <a
-              href="/niaz-hussain-cv.pdf"
-              download
-              className="group inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-dashed border-slate-300 bg-transparent text-slate-500 font-semibold text-sm hover:border-accent/60 hover:text-accent hover:bg-accent/5 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 w-full sm:w-auto"
-            >
-              <Download size={15} className="group-hover:animate-bounce" />
-              Download CV
-            </a> */}
           </motion.div>
 
           <motion.div
@@ -162,7 +153,7 @@ const Hero = () => {
                   🏔️
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide leading-none mb-0.5">Expertise</p>
+                  <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide leading-none mb-0.5">Expertise</p>
                   <p className="text-sm font-bold text-primary leading-none">Rocky Terrains</p>
                 </div>
               </div>
@@ -175,7 +166,7 @@ const Hero = () => {
                   <Layers size={16} className="text-sky-500" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide leading-none mb-0.5">Tools</p>
+                  <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide leading-none mb-0.5">Tools</p>
                   <p className="text-sm font-bold text-primary leading-none">Civil 3D & AutoCAD</p>
                 </div>
               </div>
@@ -188,7 +179,7 @@ const Hero = () => {
                   <FileText size={15} className="text-emerald-500" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide leading-none mb-0.5">Also</p>
+                  <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide leading-none mb-0.5">Also</p>
                   <p className="text-sm font-bold text-primary leading-none">Doc Controller</p>
                 </div>
               </div>

@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Calendar, Ruler, Flame, Building2 } from 'lucide-react';
 
@@ -35,7 +34,7 @@ const experiences = [
     tags: ['Oracle', 'MS Excel', 'GPS Surveying'],
     iconBg: 'bg-accent',
     ringColor: 'ring-accent/20',
-    tagStyle: 'bg-accent/10 text-accent',
+    tagStyle: 'bg-accent/10 text-accent-strong',
     borderColor: 'border-accent/40',
   },
   {
@@ -82,12 +81,12 @@ const ExperienceCard = ({ exp }) => (
         <Calendar size={11} />
         {exp.date}
       </span>
-      <span className="text-xs text-slate-400 font-semibold">{exp.duration}</span>
+      <span className="text-xs text-slate-500 font-semibold">{exp.duration}</span>
     </div>
 
     <h3 className="text-lg font-bold text-primary mb-1 leading-snug">{exp.role}</h3>
 
-    <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wide">
+    <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">
       <span className="flex items-center gap-1"><Building2 size={11} /> {exp.company}</span>
       <span className="text-slate-200">·</span>
       <span className="flex items-center gap-1"><MapPin size={11} /> {exp.location}</span>
@@ -114,7 +113,7 @@ const Experience = () => {
         whileInView="visible"
         viewport={{ once: true, margin: '-80px' }}
       >
-        <motion.p variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.18em] text-accent mb-3">
+        <motion.p variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.18em] text-accent-strong mb-3">
           Experience
         </motion.p>
         <motion.h2 variants={fadeUp} className="section-title">

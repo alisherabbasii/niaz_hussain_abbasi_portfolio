@@ -1,5 +1,6 @@
-import React from 'react';
+import { MotionConfig } from 'framer-motion';
 import Navbar from './components/Navbar';
+import { SkipToContent } from './components/ui';
 import Hero from './sections/Hero';
 import About from './sections/About';
 import Experience from './sections/Experience';
@@ -12,20 +13,25 @@ import Footer from './sections/Footer';
 
 function App() {
   return (
-    <div className="min-h-screen bg-secondary selection:bg-accent/20 selection:text-accent-dark">
-      <Navbar />
-      <main>
-        <Hero />
-        <About />
-        <Experience />
-        <Skills />
-        <WorkHighlights />
-        <Personal />
-        <Values />
-        <Contact />
-      </main>
-      <Footer />
-    </div>
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen bg-secondary selection:bg-accent/20 selection:text-accent-dark">
+        <SkipToContent />
+        <header>
+          <Navbar />
+        </header>
+        <main id="main-content" tabIndex={-1} className="focus:outline-none">
+          <Hero />
+          <About />
+          <Experience />
+          <Skills />
+          <WorkHighlights />
+          <Personal />
+          <Values />
+          <Contact />
+        </main>
+        <Footer />
+      </div>
+    </MotionConfig>
   );
 }
 
