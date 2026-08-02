@@ -26,6 +26,11 @@ const NAV_LINKS = [
 // 'Blog', showInNav: true }` entry here once that content and its routing
 // ship — wiring it in now would point the nav at a dead link.
 
+// Education and Certifications (src/sections/Education.jsx,
+// src/sections/Certifications.jsx) render nothing until their data files
+// (src/data/education.js, src/data/certifications.js) have real entries —
+// add matching NAV_LINKS entries at that point, not before.
+
 const CTA = { id: 'contact', label: "Let's Talk" };
 
 const TRACKED_IDS = [...NAV_LINKS.map((link) => link.id), CTA.id];

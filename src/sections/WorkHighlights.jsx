@@ -1,157 +1,94 @@
 import { motion } from 'framer-motion';
-import { Mountain, Building2, Waves, ArrowUpRight } from 'lucide-react';
+import { Section } from '../components/ui';
+import { fadeUp, stagger, viewportOnce } from '../utils/motion';
+import { projects } from '../data/projects';
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } }
-};
-
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.13, delayChildren: 0.05 } }
-};
-
-const projects = [
-  {
-    title: 'Northern Highway Expansion',
-    category: 'Mountain Terrain',
-    description:
-      'Executed controlled blasting and precise leveling for a 50 km highway stretch through rocky mountain passes.',
-    tags: ['Blasting', 'Surveying', 'GPS'],
+const THEME_CLASSES = {
+  sky: {
     gradient: 'from-sky-500 via-blue-600 to-indigo-700',
-    Icon: Mountain,
-    stat: '50 km',
-    statLabel: 'Highway carved',
+    tag: 'bg-sky-50 text-sky-700',
   },
-  {
-    title: 'City Central Mall',
-    category: 'Commercial Layout',
-    description:
-      'Managed the full site layout from initial blueprints to foundations using Civil 3D, ensuring millimeter-level precision.',
-    tags: ['AutoCAD', 'Civil 3D', 'Supervision'],
+  emerald: {
     gradient: 'from-emerald-500 via-teal-600 to-cyan-700',
-    Icon: Building2,
-    stat: '±1 mm',
-    statLabel: 'Layout precision',
+    tag: 'bg-emerald-50 text-emerald-700',
   },
-  {
-    title: 'River Dam Support Base',
-    category: 'Infrastructure',
-    description:
-      'Coordinated logistics and heavy machinery placement on uneven riverside terrain with zero safety incidents.',
-    tags: ['Logistics', 'Safety', 'Document Control'],
+  amber: {
     gradient: 'from-amber-500 via-orange-500 to-rose-600',
-    Icon: Waves,
-    stat: '0',
-    statLabel: 'Safety incidents',
+    tag: 'bg-amber-50 text-amber-700',
   },
-];
+};
 
+/**
+ * Case-study preview card. Content is always visible — no hover-only reveal —
+ * so the full context/responsibility/tools/result set is reachable without a
+ * mouse and without any expand/collapse machinery the short copy doesn't need.
+ */
 const ProjectCard = ({ project }) => {
-  const { Icon } = project;
+  const theme = THEME_CLASSES[project.theme] ?? THEME_CLASSES.sky;
+  const Icon = project.icon;
+
   return (
-    <motion.div
+    <motion.article
       variants={fadeUp}
-      whileHover={{ scale: 1.025, boxShadow: '0 20px 60px rgba(0,0,0,0.22), 0 8px 24px rgba(0,0,0,0.14)' }}
+      whileHover={{ y: -4 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-      className="relative h-80 rounded-2xl overflow-hidden cursor-default group transition-all duration-300"
-      style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.1)' }}
+      className="card flex flex-col overflow-hidden"
     >
-      {/* Gradient background */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${project.gradient}`} />
-
-      {/* Dot grid overlay */}
-      <div
-        className="absolute inset-0 opacity-30"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)',
-          backgroundSize: '22px 22px',
-        }}
-      />
-
-      {/* Large decorative icon */}
-      <div className="absolute -bottom-6 -right-6 text-white/10 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500 ease-out pointer-events-none">
-        <Icon size={180} strokeWidth={0.6} />
+      {/* Header band — context + decorative icon */}
+      <div className={`relative -m-6 mb-5 px-6 py-7 bg-gradient-to-br ${theme.gradient} overflow-hidden`}>
+        <div
+          className="absolute inset-0 opacity-25"
+          style={{
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px)',
+            backgroundSize: '20px 20px',
+          }}
+          aria-hidden="true"
+        />
+        <Icon size={110} strokeWidth={0.6} className="absolute -bottom-5 -right-5 text-white/15 pointer-events-none" aria-hidden="true" />
+        <span className="relative inline-flex items-center text-[10px] font-bold uppercase tracking-[0.15em] text-white/90 bg-white/15 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/20">
+          {project.context}
+        </span>
+        <h3 className="relative text-xl font-bold text-white mt-4 leading-tight">{project.title}</h3>
       </div>
 
-      {/* Default visible content */}
-      <div className="absolute inset-0 p-6 flex flex-col justify-between z-10">
-        {/* Category badge */}
-        <div className="flex items-start justify-between">
-          <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-[0.15em] text-white/80 bg-white/15 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/20">
-            {project.category}
-          </span>
-          {/* Arrow icon — fades in on hover */}
-          <div className="w-8 h-8 bg-white/15 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm border border-white/20 shrink-0">
-            <ArrowUpRight size={15} className="text-white" />
-          </div>
-        </div>
+      <p className="text-sm text-slate-500 leading-[1.7] font-light mb-5">{project.responsibility}</p>
 
-        {/* Title + stat row */}
-        <div className="flex items-end justify-between gap-4">
-          <h3 className="text-xl font-bold text-white leading-tight drop-shadow-sm">
-            {project.title}
-          </h3>
-          <div className="text-right shrink-0">
-            <p className="text-2xl font-black text-white leading-none">{project.stat}</p>
-            <p className="text-[10px] text-white/60 uppercase tracking-wide mt-0.5">{project.statLabel}</p>
-          </div>
-        </div>
-      </div>
+      <ul className="flex flex-wrap gap-2 mb-5">
+        {project.tools.map((tool) => (
+          <li key={tool} className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${theme.tag}`}>
+            {tool}
+          </li>
+        ))}
+      </ul>
 
-      {/* Hover overlay — slides up from bottom */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/25 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-20 p-6 flex flex-col justify-end">
-        <p className="text-white/90 text-sm leading-relaxed font-light mb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-150">
-          {project.description}
-        </p>
-        <div className="flex flex-wrap gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-200">
-          {project.tags.map((tag) => (
-            <span
-              key={tag}
-              className="px-2.5 py-1 bg-white/15 text-xs font-semibold text-white rounded-full border border-white/25 backdrop-blur-sm"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
+      <div className="mt-auto pt-4 border-t border-slate-100 flex items-baseline gap-2">
+        <span className="text-2xl font-black text-primary leading-none">{project.result.value}</span>
+        <span className="text-xs text-slate-500 uppercase tracking-wide">{project.result.label}</span>
       </div>
-    </motion.div>
+    </motion.article>
   );
 };
 
 const WorkHighlights = () => {
   return (
-    <section id="work">
+    <Section
+      id="work"
+      eyebrow="Work"
+      title="Work Highlights"
+      subtitle="Real-world execution and problem-solving on demanding sites."
+    >
       <motion.div
-        variants={stagger}
+        className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-12"
+        variants={stagger()}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: '-80px' }}
+        viewport={viewportOnce}
       >
-        <motion.p variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.18em] text-accent-strong mb-3">
-          Work
-        </motion.p>
-        <motion.h2 variants={fadeUp} className="section-title">
-          Work Highlights
-        </motion.h2>
-        <motion.p variants={fadeUp} className="section-subtitle">
-          Real-world execution and problem-solving on demanding sites.
-        </motion.p>
-
-        <motion.div
-          className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-12"
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-60px' }}
-        >
-          {projects.map((project, idx) => (
-            <ProjectCard key={idx} project={project} />
-          ))}
-        </motion.div>
+        {projects.map((project) => (
+          <ProjectCard key={project.id} project={project} />
+        ))}
       </motion.div>
-    </section>
+    </Section>
   );
 };
 
