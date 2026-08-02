@@ -27,7 +27,7 @@ const Footer = () => {
     <footer className="bg-white border-t border-slate-100 py-14 px-4">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
         <div className="text-center md:text-left">
-          <a href="#" className="text-xl font-heading font-black text-primary tracking-tight block mb-1.5">
+          <a href="#home" className="text-xl font-heading font-black text-primary tracking-tight block mb-1.5">
             Niaz<span className="text-accent-strong">Hussain.</span>
           </a>
           <p className="text-slate-500 text-sm font-medium">Building with precision and purpose.</p>
