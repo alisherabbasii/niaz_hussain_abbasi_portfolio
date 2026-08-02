@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { id: 'home', label: 'Home', showInNav: false },
   { id: 'about', label: 'About', showInNav: true },
   { id: 'experience', label: 'Experience', showInNav: true },
-  { id: 'skills', label: 'Skills', showInNav: true },
+  { id: 'skills', label: 'Expertise', showInNav: true },
   { id: 'work', label: 'Work', showInNav: true },
   { id: 'personal', label: 'Personal', showInNav: true },
 ];

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { Target, HardHat, Compass } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Ruler, HardHat, ClipboardList } from 'lucide-react';
+import { Button } from '../components/ui';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -11,30 +12,21 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.13, delayChildren: 0.05 } }
 };
 
-const highlights = [
+const approach = [
   {
-    icon: Target,
-    title: 'Precision',
-    description: 'Exact site calculation and meticulous management to minimise risk in demanding, volatile environments.',
-    iconColor: 'text-accent',
-    iconBg: 'bg-accent/10',
-    border: 'border-l-accent',
+    icon: Ruler,
+    title: 'Precision & Survey',
+    description: 'Exact site calculation, GPS surveying, and leveling to minimise risk on demanding, uneven terrain.',
   },
   {
     icon: HardHat,
-    title: 'Safety First',
-    description: 'Strict compliance with safety standards during extreme operations, including high-altitude mountain blasting.',
-    iconColor: 'text-amber-500',
-    iconBg: 'bg-amber-50',
-    border: 'border-l-amber-400',
+    title: 'Safety-First Supervision',
+    description: 'Strict compliance during high-risk operations, including mountain blasting, with a zero-incident record.',
   },
   {
-    icon: Compass,
-    title: 'Leadership',
-    description: 'Guiding cross-functional teams with clarity and empathy to deliver complex projects on schedule.',
-    iconColor: 'text-emerald-500',
-    iconBg: 'bg-emerald-50',
-    border: 'border-l-emerald-400',
+    icon: ClipboardList,
+    title: 'Documentation & Coordination',
+    description: 'Accurate document control and team coordination using Oracle and Excel-based systems.',
   },
 ];
 
@@ -52,41 +44,42 @@ const About = () => {
       >
         {/* Section header */}
         <div className="max-w-2xl mb-14">
-          <motion.p variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.18em] text-accent-strong mb-3">
+          <motion.p variants={fadeUp} className="eyebrow mb-3">
             About
           </motion.p>
-          <motion.h2 variants={fadeUp} className="section-title !mb-4">
-            The Story Behind the Hard Hat
+          <motion.h2 variants={fadeUp} className="section-title !mb-4 text-left">
+            A Decade of Precision, Built On Site
           </motion.h2>
-          <motion.p variants={fadeUp} className="section-subtitle !mb-0">
-            A multi-skilled professional in civil engineering, construction supervision, and technical documentation.
+          <motion.p variants={fadeUp} className="section-subtitle !mb-0 text-left mx-0">
+            Civil engineering, survey work, and document control — proven through hands-on
+            roles across Pakistan&rsquo;s most demanding terrain.
           </motion.p>
         </div>
 
-        {/* 2-column body */}
-        <div className="grid lg:grid-cols-2 gap-14 lg:gap-20 items-start">
+        {/* Asymmetric body: biography (left) vs. working approach (right) */}
+        <div className="grid lg:grid-cols-[1.3fr_1fr] gap-14 lg:gap-16 items-start">
 
-          {/* Left — short story */}
-          <motion.div variants={fadeUp} className="space-y-6">
-            <p className="text-[1.0625rem] text-slate-600 leading-[1.75] font-light">
-              With hands-on experience as a Survey Engineer, Civil Supervisor, Blasting Supervisor,
-              and Document Controller, I have built a versatile career tackling complex construction
-              challenges — particularly in mountainous and rocky environments where precision is non-negotiable.
-            </p>
-
-            <blockquote className="relative border-l-4 border-accent pl-5 py-2 rounded-r-xl" style={{ background: 'linear-gradient(90deg, rgba(14,165,233,0.06) 0%, transparent 100%)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }}>
-              <span className="absolute -top-3 -left-1 text-5xl text-accent/20 font-serif leading-none select-none">"</span>
-              <p className="italic font-medium text-slate-700 text-base leading-relaxed">
-                Every site is an opportunity to uplift both the environment and the people around it.
+          {/* Left — biography, credentials-in-prose, CTA */}
+          <motion.div variants={fadeUp} className="space-y-8">
+            <div className="space-y-5 max-w-2xl">
+              <p className="text-[1.0625rem] text-slate-600 leading-[1.75] font-light">
+                My career has moved from reading construction drawings on site to controlling
+                the documents an entire project depends on. Since 2012, I&rsquo;ve worked as a
+                Civil Supervisor, Blasting Supervisor, and — most recently — Survey Engineer
+                and Document Controller, with a consistent focus on mountainous and rocky
+                terrain, where a small error in survey work or safety compliance carries real
+                consequences.
               </p>
-            </blockquote>
+              <p className="text-[1.0625rem] text-slate-600 leading-[1.75] font-light">
+                That progression has shaped how I work: precise measurement backed by
+                documented decisions, and safety that isn&rsquo;t negotiable — whether
+                I&rsquo;m supervising a controlled blast on a mountain pass or keeping survey
+                and document records aligned for a team that relies on them.
+              </p>
+            </div>
 
-            <p className="text-[1.0625rem] text-slate-600 leading-[1.75] font-light">
-              Beyond the blueprints, I give back through social work, mountain poetry, and digital content
-              — committed to inspiring and educating my community.
-            </p>
-
-            <div className="pt-2 flex items-center gap-6 text-sm font-medium text-slate-500 rounded-2xl px-6 py-4" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,1)', border: '1px solid rgba(226,232,240,0.8)' }}>
+            {/* Stat strip */}
+            <div className="flex items-center gap-6 text-sm font-medium text-slate-500 rounded-2xl px-6 py-4" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,1)', border: '1px solid rgba(226,232,240,0.8)' }}>
               <div>
                 <span className="block text-2xl font-extrabold text-primary">10+</span>
                 Years on site
@@ -98,31 +91,44 @@ const About = () => {
               </div>
               <div className="h-10 w-px bg-slate-200"></div>
               <div>
-                <span className="block text-2xl font-extrabold text-primary">3</span>
+                <span className="block text-2xl font-extrabold text-primary">4</span>
                 Software tools
               </div>
             </div>
+
+            {/* CTA */}
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <Button href="#contact" icon={ArrowRight}>
+                Get in Touch
+              </Button>
+              <Button href="#experience" variant="outline" icon={ArrowUpRight}>
+                Review My Experience
+              </Button>
+            </div>
           </motion.div>
 
-          {/* Right — highlight cards */}
-          <motion.div className="grid gap-5" variants={stagger}>
-            {highlights.map(({ icon: Icon, title, description, iconColor, iconBg, border }) => (
-              <motion.div
-                key={title}
-                variants={fadeUp}
-                whileHover={{ scale: 1.03, y: -5 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-                className={`card border-l-4 ${border} flex items-start gap-5`}
-              >
-                <div className={`p-3 ${iconBg} ${iconColor} rounded-xl shrink-0 mt-0.5`}>
-                  <Icon size={22} />
+          {/* Right — working approach, visually distinct from the biography */}
+          <motion.div
+            variants={fadeUp}
+            className="rounded-3xl border border-slate-100/80 p-7 lg:p-8"
+            style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)', boxShadow: '0 2px 12px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,1)' }}
+          >
+            <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-accent-strong mb-6">
+              Working Approach
+            </h3>
+            <div className="divide-y divide-slate-100">
+              {approach.map(({ icon: Icon, title, description }) => (
+                <div key={title} className="flex items-start gap-4 py-5 first:pt-0 last:pb-0">
+                  <div className="w-10 h-10 rounded-xl bg-accent/10 text-accent-strong flex items-center justify-center shrink-0">
+                    <Icon size={18} aria-hidden="true" />
+                  </div>
+                  <div>
+                    <h4 className="text-[0.9375rem] font-bold text-primary mb-1">{title}</h4>
+                    <p className="text-sm text-slate-500 leading-[1.65] font-light">{description}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-primary mb-1.5">{title}</h3>
-                  <p className="text-sm text-slate-500 leading-[1.7] font-light">{description}</p>
-                </div>
-              </motion.div>
-            ))}
+              ))}
+            </div>
           </motion.div>
 
         </div>

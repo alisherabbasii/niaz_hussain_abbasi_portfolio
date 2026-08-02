@@ -1,9 +1,5 @@
 import { motion } from 'framer-motion';
-import {
-  Layers, PenTool, Navigation, FileText, AlignCenter,
-  FolderOpen, BarChart2, Database, Users, ShieldCheck,
-  Mountain, Zap, Wind, Droplets, Hammer,
-} from 'lucide-react';
+import { Ruler, HardHat, ClipboardList, Mountain } from 'lucide-react';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -12,123 +8,75 @@ const fadeUp = {
 
 const stagger = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.05 } }
-};
-
-const chipAnim = {
-  hidden: { opacity: 0, scale: 0.85, y: 10 },
-  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] } }
-};
-
-const chipStagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } }
+  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } }
 };
 
 const categories = [
   {
-    title: 'Engineering Tools',
-    subtitle: 'Software & field instruments for precise civil work.',
-    CategoryIcon: PenTool,
-    headerGradient: 'from-accent/10 via-sky-50 to-transparent',
-    iconBg: 'bg-accent',
-    chipHover: 'hover:bg-accent/10 hover:text-accent hover:border-accent/30',
-    chipIconColor: 'text-accent',
-    skills: [
-      { name: 'Civil 3D',               Icon: Layers       },
-      { name: 'AutoCAD',                Icon: PenTool      },
-      { name: 'GPS Surveying',           Icon: Navigation   },
-      { name: 'Construction Drawings',   Icon: FileText     },
-      { name: 'Site Leveling',           Icon: AlignCenter  },
-    ],
+    title: 'Civil Engineering & Survey',
+    description: 'Civil 3D and AutoCAD drawing work, GPS-based survey, and precise site leveling.',
+    Icon: Ruler,
+    iconBg: 'bg-accent/10',
+    iconColor: 'text-accent-strong',
+    chipHover: 'hover:border-accent/40 hover:text-accent-strong hover:bg-accent/5',
+    skills: ['Civil 3D', 'AutoCAD', 'GPS Surveying', 'Construction Drawings', 'Site Leveling'],
   },
   {
-    title: 'Project Management',
-    subtitle: 'Systems for coordinating teams and records.',
-    CategoryIcon: ShieldCheck,
-    headerGradient: 'from-emerald-50 via-teal-50/40 to-transparent',
-    iconBg: 'bg-emerald-500',
-    chipHover: 'hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200',
-    chipIconColor: 'text-emerald-500',
-    skills: [
-      { name: 'Document Control',   Icon: FolderOpen  },
-      { name: 'MS Excel',           Icon: BarChart2   },
-      { name: 'Oracle',             Icon: Database    },
-      { name: 'Team Supervision',   Icon: Users       },
-      { name: 'Safety Compliance',  Icon: ShieldCheck },
-    ],
+    title: 'Construction Supervision',
+    description: 'On-site oversight of civil works and controlled blasting operations, with a zero-incident safety record.',
+    Icon: HardHat,
+    iconBg: 'bg-emerald-50',
+    iconColor: 'text-emerald-600',
+    chipHover: 'hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50',
+    skills: ['Team Supervision', 'Safety Compliance', 'Controlled Blasting'],
   },
   {
-    title: 'Specialized Sites',
-    subtitle: 'Expertise in extreme terrain & high-risk operations.',
-    CategoryIcon: Mountain,
-    headerGradient: 'from-amber-50 via-orange-50/40 to-transparent',
-    iconBg: 'bg-amber-400',
-    chipHover: 'hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200',
-    chipIconColor: 'text-amber-500',
-    skills: [
-      { name: 'Rocky Terrains',      Icon: Mountain  },
-      { name: 'Mountain Blasting',   Icon: Zap       },
-      { name: 'High-Altitude Sites', Icon: Wind      },
-      { name: 'Erosion Control',     Icon: Droplets  },
-      { name: 'Trenching',           Icon: Hammer    },
-    ],
+    title: 'Documentation & Coordination',
+    description: 'Maintaining accurate project records and team coordination through Oracle and Excel-based systems.',
+    Icon: ClipboardList,
+    iconBg: 'bg-violet-50',
+    iconColor: 'text-violet-600',
+    chipHover: 'hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50',
+    skills: ['Document Control', 'Oracle', 'MS Excel'],
+  },
+  {
+    title: 'Specialized Terrain',
+    description: 'Extreme-terrain experience across rocky, high-altitude, and erosion-prone sites.',
+    Icon: Mountain,
+    iconBg: 'bg-amber-50',
+    iconColor: 'text-amber-600',
+    chipHover: 'hover:border-amber-300 hover:text-amber-600 hover:bg-amber-50',
+    skills: ['Rocky Terrains', 'High-Altitude Sites', 'Erosion Control', 'Trenching'],
   },
 ];
 
-const SkillChip = ({ name, Icon, chipHover, chipIconColor }) => (
-  <motion.div
-    variants={chipAnim}
-    whileHover={{ y: -3, scale: 1.03 }}
-    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-    className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-medium cursor-default transition-colors duration-200 ${chipHover}`}
-    style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.9)' }}
-  >
-    <Icon size={15} className={`shrink-0 transition-colors duration-200 ${chipIconColor}`} />
-    <span className="leading-none">{name}</span>
-  </motion.div>
-);
-
-const CategoryCard = ({ cat }) => {
-  const { CategoryIcon } = cat;
+const CategoryRow = ({ cat }) => {
+  const { Icon } = cat;
   return (
     <motion.div
       variants={fadeUp}
-      className="rounded-2xl border border-slate-100/80 overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1"
-      style={{ background: 'linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)', boxShadow: '0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,1)' }}
-      whileHover={{ scale: 1.02, y: -5, boxShadow: '0 12px 32px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1)' }}
-      transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+      className="grid lg:grid-cols-[280px_1fr] gap-5 lg:gap-10 py-8 first:pt-0 last:pb-0"
     >
-      {/* Card header */}
-      <div className={`bg-gradient-to-br ${cat.headerGradient} px-6 pt-7 pb-6`}>
-        <div className={`w-12 h-12 ${cat.iconBg} rounded-2xl flex items-center justify-center mb-4`} style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.2), 0 1px 4px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.25)' }}>
-          <CategoryIcon size={22} className="text-white" />
+      <div className="flex items-start gap-4">
+        <div className={`w-11 h-11 rounded-xl ${cat.iconBg} ${cat.iconColor} flex items-center justify-center shrink-0`}>
+          <Icon size={20} aria-hidden="true" />
         </div>
-        <h3 className="text-lg font-bold text-primary mb-1">{cat.title}</h3>
-        <p className="text-sm text-slate-500 font-light leading-[1.65]">{cat.subtitle}</p>
+        <div>
+          <h3 className="text-base font-bold text-primary mb-1.5 leading-snug">{cat.title}</h3>
+          <p className="text-sm text-slate-500 leading-[1.65] font-light">{cat.description}</p>
+        </div>
       </div>
 
-      {/* Divider */}
-      <div className="h-px bg-slate-100 mx-6" />
-
-      {/* Skill chips */}
-      <motion.div
-        className="grid grid-cols-2 gap-2.5 p-6 flex-1"
-        variants={chipStagger}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-40px' }}
-      >
+      <div className="flex flex-wrap content-start gap-2.5 lg:pt-0.5">
         {cat.skills.map((skill) => (
-          <SkillChip
-            key={skill.name}
-            name={skill.name}
-            Icon={skill.Icon}
-            chipHover={cat.chipHover}
-            chipIconColor={cat.chipIconColor}
-          />
+          <span
+            key={skill}
+            className={`px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-600 font-medium cursor-default transition-colors duration-200 ${cat.chipHover}`}
+          >
+            {skill}
+          </span>
         ))}
-      </motion.div>
+      </div>
     </motion.div>
   );
 };
@@ -142,25 +90,26 @@ const Skills = () => {
         whileInView="visible"
         viewport={{ once: true, margin: '-80px' }}
       >
-        <motion.p variants={fadeUp} className="text-xs font-bold uppercase tracking-[0.18em] text-accent-strong mb-3">
-          Skills
+        <motion.p variants={fadeUp} className="eyebrow mb-3">
+          Expertise
         </motion.p>
         <motion.h2 variants={fadeUp} className="section-title">
-          Core Competencies
+          Core Expertise
         </motion.h2>
         <motion.p variants={fadeUp} className="section-subtitle">
-          Hard technical skills balanced with effective project management.
+          Technical, supervisory, and documentation skills built across infrastructure,
+          highway, and commercial projects in demanding terrain.
         </motion.p>
 
         <motion.div
-          className="grid md:grid-cols-3 gap-6 mt-12"
+          className="mt-12 divide-y divide-slate-100 border-y border-slate-100"
           variants={stagger}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-60px' }}
         >
-          {categories.map((cat, idx) => (
-            <CategoryCard key={idx} cat={cat} index={idx} />
+          {categories.map((cat) => (
+            <CategoryRow key={cat.title} cat={cat} />
           ))}
         </motion.div>
       </motion.div>
