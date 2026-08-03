@@ -55,7 +55,11 @@ CREATE TABLE IF NOT EXISTS tags (
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Blog posts.
+-- Blog posts. `publish_at` (admin-chosen scheduling target) is distinct
+-- from `published_at` (timestamp a post actually first went live) — see
+-- backend/database/migrations/003_blog_publish_at.php. Databases
+-- provisioned before that migration shipped are brought up to this shape
+-- by it (run via backend/migrate.php), not by re-running this file.
 CREATE TABLE IF NOT EXISTS blog_posts (
   id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   title             VARCHAR(200)  NOT NULL,
@@ -70,6 +74,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   featured          TINYINT(1)    NOT NULL DEFAULT 0,
   seo_title         VARCHAR(200)  NULL,
   seo_description   VARCHAR(400)  NULL,
+  publish_at        DATETIME      NULL,
   published_at      DATETIME      NULL,
   created_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -78,6 +83,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   CONSTRAINT fk_posts_author   FOREIGN KEY (author_id)   REFERENCES admins(id)     ON DELETE RESTRICT,
 
   INDEX idx_posts_status_published (status, published_at),
+  INDEX idx_posts_publish_at (status, publish_at),
   INDEX idx_posts_featured (featured, status, published_at),
   INDEX idx_posts_category (category_id),
   FULLTEXT INDEX ft_posts_search (title, description, content)

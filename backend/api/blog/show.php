@@ -45,7 +45,7 @@ try {
 
     $row = $stmt->fetch();
 
-    if ($row === false || ($row['status'] === 'draft' && $admin === null)) {
+    if ($row === false || ($admin === null && !blog_is_visible_to_public($row))) {
         json_response(404, ['error' => 'Blog post not found']);
     }
 

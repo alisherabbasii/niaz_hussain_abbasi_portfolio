@@ -83,3 +83,25 @@ function permission_require_role_assignable(array $actor, string $requestedRole)
         json_response(403, ['error' => 'Only a super admin can grant the super admin role.']);
     }
 }
+
+/**
+ * Blog CRUD role rule: 'super_admin' and 'admin' may act on any post.
+ * 'editor' may only act on posts they authored themselves. $postAuthorId is
+ * blog_posts.author_id for the post being acted on.
+ */
+function permission_can_manage_post(array $actor, int $postAuthorId): bool
+{
+    if (($actor['role'] ?? null) === 'editor') {
+        return (int) $actor['id'] === $postAuthorId;
+    }
+
+    return true;
+}
+
+/** Middleware: 403s if $actor isn't allowed to update/delete the post authored by $postAuthorId. */
+function permission_require_can_manage_post(array $actor, int $postAuthorId): void
+{
+    if (!permission_can_manage_post($actor, $postAuthorId)) {
+        json_response(403, ['error' => 'Editors may only modify or delete posts they authored.']);
+    }
+}

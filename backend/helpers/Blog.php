@@ -138,10 +138,14 @@ function blog_resolve_author_id(PDO $pdo, mixed $authorInput, int $fallbackAdmin
     }
 
     if (is_string($authorInput)) {
+        // Real (non-emulated) prepared statements can't reuse one named
+        // placeholder more than once per query, so each OR branch gets its
+        // own parameter bound to the same value (see the same pattern in
+        // backend/api/blog/index.php's search filter).
         $stmt = $pdo->prepare(
-            'SELECT id FROM admins WHERE (full_name = :value OR username = :value OR email = :value) AND is_active = 1 LIMIT 1'
+            'SELECT id FROM admins WHERE (full_name = :name OR username = :username OR email = :email) AND is_active = 1 LIMIT 1'
         );
-        $stmt->execute(['value' => $authorInput]);
+        $stmt->execute(['name' => $authorInput, 'username' => $authorInput, 'email' => $authorInput]);
         $row = $stmt->fetch();
 
         if ($row === false) {
@@ -226,23 +230,119 @@ function blog_fetch_tags(PDO $pdo, int $postId): array
  *
  * @throws InvalidArgumentException if the value isn't a parseable date string.
  */
-function blog_parse_datetime(mixed $value): ?string
+function blog_parse_datetime(mixed $value, string $fieldName = 'publish_date'): ?string
 {
     if ($value === null || $value === '') {
         return null;
     }
 
     if (!is_string($value)) {
-        throw new InvalidArgumentException('publish_date must be a string.');
+        throw new InvalidArgumentException("{$fieldName} must be a string.");
     }
 
     $timestamp = strtotime($value);
 
     if ($timestamp === false) {
-        throw new InvalidArgumentException("publish_date \"{$value}\" is not a valid date.");
+        throw new InvalidArgumentException("{$fieldName} \"{$value}\" is not a valid date.");
     }
 
     return date('Y-m-d H:i:s', $timestamp);
+}
+
+/**
+ * First value present in $body among $keys (checked in order), distinguishing
+ * "present with any value (including null)" from "absent entirely".
+ */
+function blog_body_has(array $body, string ...$keys): bool
+{
+    foreach ($keys as $key) {
+        if (array_key_exists($key, $body)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/** Value of the first key in $keys that exists in $body, or null if none do. */
+function blog_body_get(array $body, string ...$keys): mixed
+{
+    foreach ($keys as $key) {
+        if (array_key_exists($key, $body)) {
+            return $body[$key];
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Compute the (publish_at, published_at) pair a create/update should persist,
+ * given the post's draft/published state and the caller's requested
+ * schedule.
+ *
+ * - `publish_at` is the admin-chosen scheduling target: when omitted on a
+ *   publish, it defaults to "now" (immediate); when omitted on an edit that
+ *   doesn't touch scheduling, the existing value is kept.
+ * - `published_at` is set exactly once — the first time the post is both
+ *   `published` and its effective `publish_at` is now-or-past — and is never
+ *   overwritten again afterward (an already-set value survives unpublishing,
+ *   re-editing, or rescheduling), matching "set on first publication, not
+ *   replaced on every edit".
+ * - A future `publish_at` on a published post leaves `published_at` null:
+ *   the post is scheduled, not yet actually live (callers filter public
+ *   reads on `publish_at <= NOW()` to hide it until then).
+ * - Moving a post back to draft leaves both columns untouched.
+ *
+ * @return array{publish_at: ?string, published_at: ?string}
+ */
+function blog_compute_publish_state(
+    bool $isDraft,
+    bool $publishAtProvided,
+    ?string $requestedPublishAt,
+    ?string $existingPublishAt,
+    ?string $existingPublishedAt
+): array {
+    if ($isDraft) {
+        return [
+            'publish_at' => $publishAtProvided ? $requestedPublishAt : $existingPublishAt,
+            'published_at' => $existingPublishedAt,
+        ];
+    }
+
+    $now = date('Y-m-d H:i:s');
+    $target = $publishAtProvided ? $requestedPublishAt : $existingPublishAt;
+    $target ??= $now;
+
+    $publishedAt = $existingPublishedAt;
+    if ($publishedAt === null && $target <= $now) {
+        $publishedAt = $target;
+    }
+
+    return [
+        'publish_at' => $target,
+        'published_at' => $publishedAt,
+    ];
+}
+
+/** True if $value is a plausible already-uploaded path (see backend/helpers/Upload.php's public_url shape). */
+function blog_is_valid_cover_image_path(string $value): bool
+{
+    return str_starts_with($value, '/') && blog_strlen($value) <= 500;
+}
+
+/**
+ * True if a blog_posts row (from blog_select_base()) should be visible to an
+ * anonymous/public caller: published, and either not scheduled or its
+ * scheduled publish_at has already arrived.
+ */
+function blog_is_visible_to_public(array $row): bool
+{
+    if ($row['status'] !== 'published') {
+        return false;
+    }
+
+    return $row['publish_at'] === null || $row['publish_at'] <= date('Y-m-d H:i:s');
 }
 
 /**
@@ -266,6 +366,8 @@ function blog_format_post(array $row, array $tags): array
         'slug' => $row['slug'],
         'excerpt' => $row['description'],
         'content' => $row['content'],
+        'cover_image' => $row['cover_image_path'],
+        'cover_image_alt' => $row['cover_image_alt'],
         'author' => $row['author_name'],
         'category' => $row['category_name'],
         'tags' => $tags,
@@ -273,6 +375,7 @@ function blog_format_post(array $row, array $tags): array
         'draft' => $row['status'] === 'draft',
         'seo_title' => $row['seo_title'],
         'seo_description' => $row['seo_description'],
+        'publish_at' => $row['publish_at'],
         'publish_date' => $row['published_at'],
         'created_at' => $row['created_at'],
         'updated_at' => $row['updated_at'],

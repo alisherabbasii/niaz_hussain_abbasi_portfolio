@@ -85,7 +85,8 @@ try {
             $params['status'] = $draft ? 'draft' : 'published';
         }
     } elseif ($admin === null) {
-        $conditions[] = "bp.status = 'published'";
+        $conditions[] = "bp.status = 'published' AND (bp.publish_at IS NULL OR bp.publish_at <= :now)";
+        $params['now'] = date('Y-m-d H:i:s');
     }
 
     $whereSql = $conditions !== [] ? ('WHERE ' . implode(' AND ', $conditions)) : '';

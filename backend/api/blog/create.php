@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../helpers/Response.php';
 require_once __DIR__ . '/../../helpers/Session.php';
 require_once __DIR__ . '/../../helpers/Database.php';
 require_once __DIR__ . '/../../helpers/Blog.php';
+require_once __DIR__ . '/../../helpers/Permissions.php';
 require_once __DIR__ . '/../../middleware/CsrfMiddleware.php';
 require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
 
@@ -15,16 +16,22 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
  *   title: string (required),
  *   content: string (required),
  *   slug?: string (derived from title if omitted),
- *   excerpt?: string,
- *   author?: string|int (admin id, name, or email; defaults to the caller),
+ *   excerpt? / short_description?: string,
+ *   cover_image?: string|null (an already-uploaded path, e.g. from
+ *                  POST /api/upload/cover.php's returned url),
+ *   cover_image_alt?: string|null,
+ *   author?: string|int (admin id, name, or email; defaults to the caller;
+ *              an 'editor' caller may only author as themselves),
  *   category?: string (found-or-created by name),
  *   tags?: string[] (each found-or-created by name),
- *   featured?: bool,
- *   draft?: bool (default true),
+ *   featured? / is_featured?: bool,
+ *   draft?: bool (default true) / status?: 'draft'|'published',
  *   seo_title?: string|null,
  *   seo_description?: string|null,
- *   publish_date?: string|null (any strtotime-parseable date; defaults to
- *                    now when draft is false and no date is given)
+ *   publish_date? / publish_at?: string|null (any strtotime-parseable date —
+ *                  a future date schedules the post: it's stored as
+ *                  published, but stays hidden from public reads and
+ *                  `published_at` stays null until that time arrives)
  * }
  *
  * Requires an authenticated admin session + CSRF header. Slugs must be
@@ -68,9 +75,22 @@ if ($slug === '' || blog_strlen($slug) > 220 || !blog_is_valid_slug($slug)) {
     json_response(422, ['error' => 'slug must be lowercase alphanumeric segments separated by hyphens, at most 220 characters']);
 }
 
-$excerpt = is_string($body['excerpt'] ?? null) ? trim($body['excerpt']) : '';
+$excerptInput = blog_body_get($body, 'excerpt', 'short_description');
+$excerpt = is_string($excerptInput) ? trim($excerptInput) : '';
 if (blog_strlen($excerpt) > 400) {
-    json_response(422, ['error' => 'excerpt must be at most 400 characters']);
+    json_response(422, ['error' => 'excerpt (short_description) must be at most 400 characters']);
+}
+
+$coverImageInput = blog_body_get($body, 'cover_image');
+$coverImage = ($coverImageInput !== null && $coverImageInput !== '') ? trim((string) $coverImageInput) : null;
+if ($coverImage !== null && !blog_is_valid_cover_image_path($coverImage)) {
+    json_response(422, ['error' => 'cover_image must be an uploaded file path (starting with "/"), at most 500 characters']);
+}
+
+$coverImageAltInput = blog_body_get($body, 'cover_image_alt');
+$coverImageAlt = ($coverImageAltInput !== null && $coverImageAltInput !== '') ? trim((string) $coverImageAltInput) : null;
+if ($coverImageAlt !== null && blog_strlen($coverImageAlt) > 300) {
+    json_response(422, ['error' => 'cover_image_alt must be at most 300 characters']);
 }
 
 $seoTitle = array_key_exists('seo_title', $body) && $body['seo_title'] !== null
@@ -87,8 +107,18 @@ if ($seoDescription !== null && blog_strlen($seoDescription) > 400) {
     json_response(422, ['error' => 'seo_description must be at most 400 characters']);
 }
 
-$featured = filter_var($body['featured'] ?? false, FILTER_VALIDATE_BOOLEAN);
-$draft = filter_var($body['draft'] ?? true, FILTER_VALIDATE_BOOLEAN);
+$featured = filter_var(blog_body_get($body, 'featured', 'is_featured') ?? false, FILTER_VALIDATE_BOOLEAN);
+
+$draft = true;
+if (blog_body_has($body, 'status')) {
+    $status = is_string($body['status']) ? trim($body['status']) : '';
+    if (!in_array($status, ['draft', 'published'], true)) {
+        json_response(422, ['error' => "status must be 'draft' or 'published'"]);
+    }
+    $draft = $status === 'draft';
+} elseif (blog_body_has($body, 'draft')) {
+    $draft = filter_var($body['draft'], FILTER_VALIDATE_BOOLEAN);
+}
 $status = $draft ? 'draft' : 'published';
 
 $tags = [];
@@ -106,41 +136,60 @@ try {
         json_response(409, ['error' => "slug \"{$slug}\" is already in use"]);
     }
 
+    $publishAtInput = blog_body_get($body, 'publish_at', 'publish_date');
     try {
-        $publishDate = blog_parse_datetime($body['publish_date'] ?? null);
+        $requestedPublishAt = blog_parse_datetime($publishAtInput, 'publish_at');
     } catch (InvalidArgumentException $e) {
         json_response(422, ['error' => $e->getMessage()]);
     }
-    if (!$draft && $publishDate === null) {
-        $publishDate = date('Y-m-d H:i:s');
+    $publishState = blog_compute_publish_state(
+        $draft,
+        blog_body_has($body, 'publish_at', 'publish_date'),
+        $requestedPublishAt,
+        null,
+        null
+    );
+
+    $authorInput = $body['author'] ?? null;
+    try {
+        $authorId = blog_resolve_author_id($pdo, $authorInput, (int) $admin['id']);
+    } catch (InvalidArgumentException $e) {
+        json_response(422, ['error' => $e->getMessage()]);
+    }
+    if (($admin['role'] ?? null) === 'editor' && $authorId !== (int) $admin['id']) {
+        json_response(403, ['error' => 'Editors may only create posts authored by themselves.']);
     }
 
     $pdo->beginTransaction();
 
     try {
         $categoryId = blog_resolve_category_id($pdo, is_string($body['category'] ?? null) ? $body['category'] : null);
-        $authorId = blog_resolve_author_id($pdo, $body['author'] ?? null, (int) $admin['id']);
 
         $insert = $pdo->prepare(
             'INSERT INTO blog_posts
-                (title, slug, description, content, category_id, author_id, status, featured,
-                 seo_title, seo_description, published_at)
+                (title, slug, description, content, cover_image_path, cover_image_alt,
+                 category_id, author_id, status, featured,
+                 seo_title, seo_description, publish_at, published_at)
              VALUES
-                (:title, :slug, :description, :content, :category_id, :author_id, :status, :featured,
-                 :seo_title, :seo_description, :published_at)'
+                (:title, :slug, :description, :content, :cover_image_path, :cover_image_alt,
+                 :category_id, :author_id, :status, :featured,
+                 :seo_title, :seo_description, :publish_at, :published_at)'
         );
         $insert->execute([
             'title' => $title,
             'slug' => $slug,
             'description' => $excerpt,
             'content' => $content,
+            'cover_image_path' => $coverImage,
+            'cover_image_alt' => $coverImageAlt,
             'category_id' => $categoryId,
             'author_id' => $authorId,
             'status' => $status,
             'featured' => $featured ? 1 : 0,
             'seo_title' => $seoTitle,
             'seo_description' => $seoDescription,
-            'published_at' => $publishDate,
+            'publish_at' => $publishState['publish_at'],
+            'published_at' => $publishState['published_at'],
         ]);
 
         $postId = (int) $pdo->lastInsertId();

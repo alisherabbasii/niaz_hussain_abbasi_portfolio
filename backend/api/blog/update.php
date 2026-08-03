@@ -6,18 +6,21 @@ require_once __DIR__ . '/../../helpers/Response.php';
 require_once __DIR__ . '/../../helpers/Session.php';
 require_once __DIR__ . '/../../helpers/Database.php';
 require_once __DIR__ . '/../../helpers/Blog.php';
+require_once __DIR__ . '/../../helpers/Permissions.php';
 require_once __DIR__ . '/../../middleware/CsrfMiddleware.php';
 require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
 
 /**
  * PUT /api/blog/update.php?id=123
- * Body: any subset of the fields accepted by create.php. Fields omitted
+ * Body: any subset of the fields accepted by create.php (including its
+ * short_description/is_featured/status/publish_at aliases). Fields omitted
  * from the body are left unchanged; a field explicitly set to null clears
- * it where the column is nullable (category, seo_title, seo_description,
- * publish_date).
+ * it where the column is nullable (category, cover_image, cover_image_alt,
+ * seo_title, seo_description).
  *
  * `id` may be given as a query param or in the JSON body. Requires an
- * authenticated admin session + CSRF header. Slugs must stay unique.
+ * authenticated admin session + CSRF header. 'editor' callers may only
+ * update posts they authored. Slugs must stay unique.
  */
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'PUT') {
@@ -55,6 +58,8 @@ try {
         json_response(404, ['error' => 'Blog post not found']);
     }
 
+    permission_require_can_manage_post($admin, (int) $existing['author_id']);
+
     $title = $existing['title'];
     if (array_key_exists('title', $body)) {
         $title = is_string($body['title']) ? trim($body['title']) : '';
@@ -80,10 +85,29 @@ try {
     }
 
     $excerpt = $existing['description'];
-    if (array_key_exists('excerpt', $body)) {
-        $excerpt = is_string($body['excerpt']) ? trim($body['excerpt']) : '';
+    if (blog_body_has($body, 'excerpt', 'short_description')) {
+        $excerptInput = blog_body_get($body, 'excerpt', 'short_description');
+        $excerpt = is_string($excerptInput) ? trim($excerptInput) : '';
         if (blog_strlen($excerpt) > 400) {
-            json_response(422, ['error' => 'excerpt must be at most 400 characters']);
+            json_response(422, ['error' => 'excerpt (short_description) must be at most 400 characters']);
+        }
+    }
+
+    $coverImage = $existing['cover_image_path'];
+    if (blog_body_has($body, 'cover_image')) {
+        $coverImageInput = blog_body_get($body, 'cover_image');
+        $coverImage = ($coverImageInput !== null && $coverImageInput !== '') ? trim((string) $coverImageInput) : null;
+        if ($coverImage !== null && !blog_is_valid_cover_image_path($coverImage)) {
+            json_response(422, ['error' => 'cover_image must be an uploaded file path (starting with "/"), at most 500 characters']);
+        }
+    }
+
+    $coverImageAlt = $existing['cover_image_alt'];
+    if (blog_body_has($body, 'cover_image_alt')) {
+        $coverImageAltInput = blog_body_get($body, 'cover_image_alt');
+        $coverImageAlt = ($coverImageAltInput !== null && $coverImageAltInput !== '') ? trim((string) $coverImageAltInput) : null;
+        if ($coverImageAlt !== null && blog_strlen($coverImageAlt) > 300) {
+            json_response(422, ['error' => 'cover_image_alt must be at most 300 characters']);
         }
     }
 
@@ -104,27 +128,38 @@ try {
     }
 
     $featured = (bool) $existing['featured'];
-    if (array_key_exists('featured', $body)) {
-        $featured = filter_var($body['featured'], FILTER_VALIDATE_BOOLEAN);
+    if (blog_body_has($body, 'featured', 'is_featured')) {
+        $featured = filter_var(blog_body_get($body, 'featured', 'is_featured'), FILTER_VALIDATE_BOOLEAN);
     }
 
     $draft = $existing['status'] === 'draft';
-    if (array_key_exists('draft', $body)) {
+    if (blog_body_has($body, 'status')) {
+        $statusInput = is_string($body['status']) ? trim($body['status']) : '';
+        if (!in_array($statusInput, ['draft', 'published'], true)) {
+            json_response(422, ['error' => "status must be 'draft' or 'published'"]);
+        }
+        $draft = $statusInput === 'draft';
+    } elseif (blog_body_has($body, 'draft')) {
         $draft = filter_var($body['draft'], FILTER_VALIDATE_BOOLEAN);
     }
     $status = $draft ? 'draft' : 'published';
 
-    $publishDate = $existing['published_at'];
-    if (array_key_exists('publish_date', $body)) {
+    $publishAtProvided = blog_body_has($body, 'publish_at', 'publish_date');
+    $requestedPublishAt = $existing['publish_at'];
+    if ($publishAtProvided) {
         try {
-            $publishDate = blog_parse_datetime($body['publish_date']);
+            $requestedPublishAt = blog_parse_datetime(blog_body_get($body, 'publish_at', 'publish_date'), 'publish_at');
         } catch (InvalidArgumentException $e) {
             json_response(422, ['error' => $e->getMessage()]);
         }
     }
-    if (!$draft && $publishDate === null) {
-        $publishDate = date('Y-m-d H:i:s');
-    }
+    $publishState = blog_compute_publish_state(
+        $draft,
+        $publishAtProvided,
+        $requestedPublishAt,
+        $existing['publish_at'],
+        $existing['published_at']
+    );
 
     $tagsProvided = array_key_exists('tags', $body);
     $tags = [];
@@ -139,6 +174,18 @@ try {
         json_response(409, ['error' => "slug \"{$slug}\" is already in use"]);
     }
 
+    $authorId = (int) $existing['author_id'];
+    if (array_key_exists('author', $body)) {
+        try {
+            $authorId = blog_resolve_author_id($pdo, $body['author'], (int) $admin['id']);
+        } catch (InvalidArgumentException $e) {
+            json_response(422, ['error' => $e->getMessage()]);
+        }
+        if (($admin['role'] ?? null) === 'editor' && $authorId !== (int) $admin['id']) {
+            json_response(403, ['error' => 'Editors may only assign posts to themselves.']);
+        }
+    }
+
     $pdo->beginTransaction();
 
     try {
@@ -147,23 +194,21 @@ try {
             $categoryId = blog_resolve_category_id($pdo, is_string($body['category']) ? $body['category'] : null);
         }
 
-        $authorId = (int) $existing['author_id'];
-        if (array_key_exists('author', $body)) {
-            $authorId = blog_resolve_author_id($pdo, $body['author'], (int) $admin['id']);
-        }
-
         $update = $pdo->prepare(
             'UPDATE blog_posts SET
                 title = :title,
                 slug = :slug,
                 description = :description,
                 content = :content,
+                cover_image_path = :cover_image_path,
+                cover_image_alt = :cover_image_alt,
                 category_id = :category_id,
                 author_id = :author_id,
                 status = :status,
                 featured = :featured,
                 seo_title = :seo_title,
                 seo_description = :seo_description,
+                publish_at = :publish_at,
                 published_at = :published_at
              WHERE id = :id'
         );
@@ -172,13 +217,16 @@ try {
             'slug' => $slug,
             'description' => $excerpt,
             'content' => $content,
+            'cover_image_path' => $coverImage,
+            'cover_image_alt' => $coverImageAlt,
             'category_id' => $categoryId,
             'author_id' => $authorId,
             'status' => $status,
             'featured' => $featured ? 1 : 0,
             'seo_title' => $seoTitle,
             'seo_description' => $seoDescription,
-            'published_at' => $publishDate,
+            'publish_at' => $publishState['publish_at'],
+            'published_at' => $publishState['published_at'],
             'id' => $id,
         ]);
 
