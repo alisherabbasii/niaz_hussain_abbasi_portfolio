@@ -1,0 +1,8 @@
+1. Frontend â exactly what docs/03-DEPLOYMENT.md already describes: npm run build, then upload the contents of dist/ to Hostinger's public root (e.g. public_html/).
+2. Backend â upload the backend/ folder itself (via FTP, Hostinger's File Manager, or git if you have SSH access on your plan) to the server, outside or alongside public_html/ as you prefer. 
+Then on the server:
+  - Create backend/.env with the real Hostinger DB credentials (your .env already has a second, real-looking block: u745982856_niazabbasidb / u745982856_niazabbasi â 
+  note it's currently the second occurrence in the file, and env_load() keeps the first match per key, so double check which pair is actually "live" before deploying, 
+  or just delete the placeholder block).
+  - Run php backend/install.php once, over SSH if your plan has it, or via install.php?token=... (set INSTALL_TOKEN in .env first) 
+  if it doesn't â then remove/block install.php afterward per its own comments.

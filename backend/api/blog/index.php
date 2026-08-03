@@ -1,0 +1,118 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../../helpers/Response.php';
+require_once __DIR__ . '/../../helpers/Session.php';
+require_once __DIR__ . '/../../helpers/Database.php';
+require_once __DIR__ . '/../../helpers/Blog.php';
+require_once __DIR__ . '/../../middleware/CsrfMiddleware.php';
+require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
+
+/**
+ * GET /api/blog/index.php
+ * Query params (all optional):
+ *   page       int, default 1
+ *   per_page   int, default 10, max 50
+ *   category   filter by category name
+ *   tag        filter by tag name
+ *   featured   "1"/"0"/"true"/"false"
+ *   draft      "1"/"0"/"true"/"false" — only honored for an authenticated
+ *              admin; anonymous callers always get published-only results.
+ *
+ * Anonymous callers never see draft posts. An authenticated admin sees every
+ * status unless `draft` narrows it.
+ */
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
+    json_response(405, ['error' => 'Method not allowed']);
+}
+
+session_bootstrap();
+csrf_ensure_token();
+
+try {
+    $admin = auth_current_admin();
+    $pdo = Database::getConnection();
+
+    $page = max(1, (int) ($_GET['page'] ?? 1));
+    $perPage = (int) ($_GET['per_page'] ?? 10);
+    $perPage = $perPage > 0 ? min(50, $perPage) : 10;
+    $offset = ($page - 1) * $perPage;
+
+    $conditions = [];
+    $params = [];
+
+    $category = trim((string) ($_GET['category'] ?? ''));
+    if ($category !== '') {
+        $conditions[] = 'c.name = :category';
+        $params['category'] = $category;
+    }
+
+    $tag = trim((string) ($_GET['tag'] ?? ''));
+    $tagJoin = '';
+    if ($tag !== '') {
+        $tagJoin = 'INNER JOIN blog_post_tags bptf ON bptf.post_id = bp.id
+                    INNER JOIN tags tf ON tf.id = bptf.tag_id AND tf.name = :tag';
+        $params['tag'] = $tag;
+    }
+
+    if (isset($_GET['featured'])) {
+        $featured = filter_var($_GET['featured'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($featured !== null) {
+            $conditions[] = 'bp.featured = :featured';
+            $params['featured'] = $featured ? 1 : 0;
+        }
+    }
+
+    if ($admin !== null && isset($_GET['draft'])) {
+        $draft = filter_var($_GET['draft'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($draft !== null) {
+            $conditions[] = 'bp.status = :status';
+            $params['status'] = $draft ? 'draft' : 'published';
+        }
+    } elseif ($admin === null) {
+        $conditions[] = "bp.status = 'published'";
+    }
+
+    $whereSql = $conditions !== [] ? ('WHERE ' . implode(' AND ', $conditions)) : '';
+
+    $countSql = "SELECT COUNT(DISTINCT bp.id) AS total
+                 FROM blog_posts bp
+                 LEFT JOIN categories c ON c.id = bp.category_id
+                 {$tagJoin}
+                 {$whereSql}";
+    $countStmt = $pdo->prepare($countSql);
+    $countStmt->execute($params);
+    $total = (int) $countStmt->fetch()['total'];
+
+    $listSql = blog_select_base() . " {$tagJoin} {$whereSql}
+                ORDER BY bp.published_at DESC, bp.created_at DESC
+                LIMIT :limit OFFSET :offset";
+    $listStmt = $pdo->prepare($listSql);
+    foreach ($params as $key => $value) {
+        $listStmt->bindValue(':' . $key, $value);
+    }
+    $listStmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+    $listStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $listStmt->execute();
+    $rows = $listStmt->fetchAll();
+
+    $data = array_map(
+        static fn (array $row): array => blog_format_post($row, blog_fetch_tags($pdo, (int) $row['id'])),
+        $rows
+    );
+
+    json_response(200, [
+        'data' => $data,
+        'pagination' => [
+            'page' => $page,
+            'per_page' => $perPage,
+            'total' => $total,
+            'total_pages' => $perPage > 0 ? (int) ceil($total / $perPage) : 0,
+        ],
+    ]);
+} catch (Throwable $e) {
+    error_log('[blog/index] ' . $e->getMessage());
+    json_response(500, ['error' => 'Something went wrong. Please try again.']);
+}

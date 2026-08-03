@@ -98,9 +98,16 @@ try {
         throw new RuntimeException("Could not read schema file: {$schemaPath}");
     }
 
+    // Strip whole-line comments before splitting: schema.sql's convention is
+    // a `-- comment` line directly above each statement, and splitting on
+    // ';' first left prior code checking only whether an entire statement
+    // *started* with '--', which discarded every commented statement (i.e.
+    // every CREATE TABLE) instead of just genuinely comment-only chunks.
+    $schemaSql = preg_replace('/^\s*--.*$/m', '', $schemaSql) ?? $schemaSql;
+
     $statements = array_filter(
         array_map('trim', explode(';', $schemaSql)),
-        static fn (string $stmt): bool => $stmt !== '' && !str_starts_with($stmt, '--')
+        static fn (string $stmt): bool => $stmt !== ''
     );
 
     foreach ($statements as $statement) {
