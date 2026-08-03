@@ -1,42 +1,77 @@
 import { useState } from 'react';
-import { AlertTriangle, LogIn } from 'lucide-react';
-import { Container, PageSection, Button, Input, Badge } from '../../components/ui';
-import { checkCredentials } from '../../features/admin/auth';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { AlertTriangle, Info, LogIn } from 'lucide-react';
+import { Container, PageSection, Button, Input } from '../../components/ui';
+import { useAuth } from '../../features/admin/useAuth';
+import { isHttpError, isNetworkError } from '../../api/httpError';
 
-const AdminLogin = ({ onUnlock }) => {
-  const [username, setUsername] = useState('');
+function messageForError(error) {
+  if (isHttpError(error)) {
+    if (error.status === 401) return 'Invalid email or password.';
+    if (error.status === 422) return 'Enter a valid email and password.';
+    return error.message || 'Something went wrong. Please try again.';
+  }
+  if (isNetworkError(error)) return error.message;
+  return 'Something went wrong. Please try again.';
+}
+
+const AdminLogin = () => {
+  const { login, status, sessionExpired } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  // Already have a valid session (e.g. back button after logging in) — skip the form.
+  if (status === 'authenticated') {
+    return <Navigate to={location.state?.from ?? '/admin'} replace />;
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (checkCredentials(username, password)) {
-      setError('');
-      onUnlock();
-    } else {
-      setError('Incorrect username or password.');
+    setError('');
+    setSubmitting(true);
+    try {
+      await login(email, password);
+      navigate(location.state?.from ?? '/admin', { replace: true });
+    } catch (err) {
+      setError(messageForError(err));
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <PageSection center>
       <Container className="max-w-md">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl md:text-3xl font-extrabold text-primary tracking-tight">Admin</h1>
-          <Badge variant="warning" size="sm">Not real security</Badge>
-        </div>
+        <h1 className="text-2xl md:text-3xl font-extrabold text-primary tracking-tight mb-2">Admin Login</h1>
         <p className="text-slate-500 font-light mb-8 text-sm leading-relaxed">
-          This site has no backend — the check below runs entirely in your browser against a
-          hardcoded value shipped in the JS bundle. It keeps casual visitors out, nothing more.
+          Sign in with your admin account to access the content tools.
         </p>
+
+        {sessionExpired && !error && (
+          <p
+            className="flex items-center gap-2 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5"
+            role="status"
+          >
+            <Info size={15} className="shrink-0" aria-hidden="true" />
+            Your session expired. Please log in again.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-slate-100 bg-white p-6">
           <Input
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             autoComplete="username"
             autoFocus
+            required
+            disabled={submitting}
           />
           <Input
             label="Password"
@@ -44,6 +79,8 @@ const AdminLogin = ({ onUnlock }) => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
+            required
+            disabled={submitting}
           />
 
           {error && (
@@ -53,8 +90,8 @@ const AdminLogin = ({ onUnlock }) => {
             </p>
           )}
 
-          <Button type="submit" icon={LogIn} fullWidth>
-            Log in
+          <Button type="submit" icon={LogIn} fullWidth disabled={submitting}>
+            {submitting ? 'Logging in…' : 'Log in'}
           </Button>
         </form>
       </Container>

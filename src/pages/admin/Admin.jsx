@@ -1,18 +1,19 @@
-import { useEffect, useState } from 'react';
-import { isUnlocked, lock, unlock } from '../../features/admin/auth';
+import { useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { AuthProvider } from '../../features/admin/AuthContext';
+import ProtectedRoute from '../../features/admin/ProtectedRoute';
 import AdminLogin from './AdminLogin';
+import AdminLayout from './AdminLayout';
 import AdminDashboard from './AdminDashboard';
 
 /**
- * `/admin` ships in the production build (unlike the old dev-only content
- * tool it replaces) so it's reachable on the live site by URL. Kept out of
- * `robots.txt`/sitemap and marked `noindex` here so it doesn't show up in
- * search results. See `src/features/admin/auth.ts` for why the login screen
- * in front of it is a deterrent, not real security.
+ * `/admin/*` ships in the production build so it's reachable on the live
+ * site by URL. Kept out of `robots.txt`/sitemap and marked `noindex` here so
+ * it doesn't show up in search results. Auth is real: `AuthProvider` checks
+ * the backend session (`GET /auth/me.php`) and `ProtectedRoute` gates
+ * everything past `/admin/login` on it — see `src/features/admin/AuthContext.jsx`.
  */
 export default function Admin() {
-  const [unlocked, setUnlocked] = useState(isUnlocked);
-
   useEffect(() => {
     const meta = document.createElement('meta');
     meta.name = 'robots';
@@ -21,15 +22,16 @@ export default function Admin() {
     return () => meta.remove();
   }, []);
 
-  const handleUnlock = () => {
-    unlock();
-    setUnlocked(true);
-  };
-
-  const handleLock = () => {
-    lock();
-    setUnlocked(false);
-  };
-
-  return unlocked ? <AdminDashboard onLock={handleLock} /> : <AdminLogin onUnlock={handleUnlock} />;
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="login" element={<AdminLogin />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+          </Route>
+        </Route>
+      </Routes>
+    </AuthProvider>
+  );
 }

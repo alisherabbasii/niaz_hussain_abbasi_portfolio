@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Check, Copy, Download, LogOut, RotateCcw } from 'lucide-react';
-import { Container, PageSection, Badge, Input, Textarea, Button } from '../../components/ui';
+import { AlertTriangle, Check, Copy, Download, RotateCcw } from 'lucide-react';
+import { Container, PageSection, Badge, Input, Textarea } from '../../components/ui';
 import { CategoryBadge, BlogMeta, TagList, MarkdownContent } from '../../components/blog';
 import { normalizeBlogPost } from '../../features/blog/schema';
 import { generateSlug } from '../../features/blog/utils';
@@ -70,14 +70,14 @@ const Toggle = ({ label, hint, checked, onChange }) => (
 );
 
 /**
- * Production-included content-drafting tool, gated behind the login screen in
- * `Admin.jsx`. It still doesn't publish anything by itself: generate the
- * Markdown file here, download it, commit it into `content/blog/`, then
- * follow the rest of docs/BLOG-PUBLISHING-WORKFLOW.md (validate, flip draft
- * to false, build, deploy). There is no filesystem write and no network call
- * from this page — the download is the only output.
+ * Production-included content-drafting tool, gated behind the real backend
+ * session checked by `ProtectedRoute`/`AuthContext`. It still doesn't publish
+ * anything by itself: generate the Markdown file here, download it, commit it
+ * into `content/blog/`, then follow the rest of docs/BLOG-PUBLISHING-WORKFLOW.md
+ * (validate, flip draft to false, build, deploy). There is no filesystem write
+ * and no network call from this page — the download is the only output.
  */
-export default function AdminDashboard({ onLock }) {
+export default function AdminDashboard() {
   useDocumentTitle('Admin — Blog');
 
   const [fields, setFields] = useState(INITIAL_FIELDS);
@@ -153,11 +153,8 @@ export default function AdminDashboard({ onLock }) {
         <div className="flex items-start justify-between gap-4 mb-2">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight">Blog Admin</h1>
-            <Badge variant="warning" size="sm">No backend</Badge>
+            <Badge variant="warning" size="sm">Draft tool only</Badge>
           </div>
-          <Button variant="outline" size="sm" icon={LogOut} onClick={onLock}>
-            Log out
-          </Button>
         </div>
         <p className="text-slate-500 font-light mb-6 max-w-2xl">
           Draft a post and generate its Markdown file. Nothing on this page saves anything on its
@@ -169,7 +166,7 @@ export default function AdminDashboard({ onLock }) {
           <div className="text-sm text-amber-900">
             <p className="font-bold">This does not publish anything.</p>
             <p className="mt-1 text-amber-800">
-              This site has no backend, database, or real login — posts are Markdown files in{' '}
+              This tool doesn't save posts to the database yet — posts are Markdown files in{' '}
               <code className="bg-amber-100 px-1 py-0.5 rounded">content/blog/</code>. Download the file below,
               save it as <code className="bg-amber-100 px-1 py-0.5 rounded">content/blog/&#123;slug&#125;.md</code>,
               then run <code className="bg-amber-100 px-1 py-0.5 rounded">npm run blog:validate</code>, commit, and
