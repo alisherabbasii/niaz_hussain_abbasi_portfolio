@@ -12,10 +12,26 @@ declare(strict_types=1);
  */
 
 /**
+ * Resolve the default .env location: prefer backend/.env (where this
+ * project's .env actually lives), falling back to the project root for
+ * deployments that place it one level up instead.
+ */
+function env_default_path(): string
+{
+    $backendPath = dirname(__DIR__) . '/.env';
+
+    if (is_file($backendPath)) {
+        return $backendPath;
+    }
+
+    return dirname(__DIR__, 2) . '/.env';
+}
+
+/**
  * Load a .env file into the process environment, if not already loaded.
  *
- * @param string|null $path Absolute path to the .env file. Defaults to the
- *                           project root (one level above backend/).
+ * @param string|null $path Absolute path to the .env file. Defaults to
+ *                           backend/.env, falling back to the project root.
  */
 function env_load(?string $path = null): void
 {
@@ -25,7 +41,7 @@ function env_load(?string $path = null): void
         return;
     }
 
-    $path ??= dirname(__DIR__, 2) . '/.env';
+    $path ??= env_default_path();
 
     if (!is_file($path) || !is_readable($path)) {
         $loaded = true;
