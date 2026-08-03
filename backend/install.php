@@ -26,6 +26,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config/env.php';
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config/uploads.php';
 
 $isCli = PHP_SAPI === 'cli';
 
@@ -170,16 +171,13 @@ try {
 
     // Step 5: create upload directories on disk.
     installer_log('[5/5] Ensuring upload directories exist...');
-    $uploadsPath = env_get('UPLOADS_PATH', '../uploads');
-    $uploadsBase = str_starts_with($uploadsPath, '/')
-        ? $uploadsPath
-        : __DIR__ . '/' . $uploadsPath;
-    $uploadsBase = rtrim($uploadsBase, '/');
+    $uploadsBase = uploads_base_dir();
 
     $directories = [
         $uploadsBase,
-        $uploadsBase . '/covers',
         $uploadsBase . '/blog',
+        $uploadsBase . '/blog/covers',
+        $uploadsBase . '/blog/content',
     ];
 
     foreach ($directories as $dir) {
