@@ -1,5 +1,22 @@
 # Next.js Blog Reuse Audit
 
+> **Resolution (2026-08-03):** Per this audit's own recommendation in §5/§6, the entire
+> admin/auth/write-path set has been deleted from the repo — `src/components/admin/*`,
+> `api/admin/*`, and `actions/*` under `migration/nextjs-blog-reference/`. None of it was
+> ever reachable (excluded from `tsconfig.json`'s `include`, from `vite.config.js`, and
+> from ESLint via `globalIgnores(['migration'])`), so this is a hygiene removal of unsafe
+> reference code, not a behavior change to anything live. In its place, a genuinely
+> local, dev-only authoring aid was added at `src/pages/dev/BlogAuthor.jsx`, routed as
+> `/dev/blog-author` only when `import.meta.env.DEV` is true (see `src/app/router.jsx`).
+> It runs entirely client-side, has no auth, no server calls, and no filesystem access —
+> it generates a Markdown+frontmatter file and a matching `BLOG_POSTS` object literal for
+> the developer to copy/download and commit by hand, exactly per the "Filesystem save →
+> Markdown/JSON files created locally... committed... before `vite build`" replacement
+> this audit already specified. `RichTextEditor.tsx`'s Tiptap dependency was not carried
+> over — the new tool uses a plain `<textarea>` against the same small Markdown subset
+> `features/blog/markdown.ts` already renders, so the authoring surface and the render
+> surface can never drift apart.
+
 **Scope:** every file copied into this repo from the old Next.js project (`/actions`, `/api`, `/blog`, `/src/components/admin`, `/src/components/blog`, `/src/components/BlogCard.tsx`, `/src/components/BlogSection.tsx`).
 
 **Target runtime (this project):** Vite + React 19 + `react-router-dom` v7, client-side only, static hosting on Hostinger. No Node server, no API routes, no filesystem access at runtime, no database. Confirmed via `package.json` (no `next`, no `@vercel/*`, no `@tiptap/*`, no `slugify`), and no `@` path alias exists anywhere in `vite.config.js` — every `@/...` import below is currently a hard build error, not a style nit.
