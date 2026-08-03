@@ -1,60 +1,56 @@
 # Next.js Blog Migration Inventory
 
-Follow-up to [`docs/NEXTJS-BLOG-REUSE-AUDIT.md`](./NEXTJS-BLOG-REUSE-AUDIT.md), which contains the full per-file rationale. This document records the physical isolation step: where each copied file now lives, and what still needs to happen before any of it is reused.
+Follow-up to [`docs/NEXTJS-BLOG-REUSE-AUDIT.md`](./NEXTJS-BLOG-REUSE-AUDIT.md), which contains the full per-file rationale. This document is the closing record of the migration: where every copied file ended up, and its final status now that the native React blog is live.
 
-**What changed:** every copied file that imports a Next.js-only API (`next/link`, `next/navigation`, `next/image`, `next/script`, `"use server"`, Route Handler conventions) or a module that doesn't exist in this repo (`@/data/blogService`, `@/data/authService`, `@/i18n/LanguageContext`, `@/app/actions/*`) was moved out of the active React source tree into `migration/nextjs-blog-reference/`, preserving its original relative path and full file contents. Nothing was deleted, edited, or rewritten. The two files with zero Next.js dependencies (`TableOfContents.tsx`, `ShareButtons.tsx`) were left in place in `src/components/blog/` since they were already valid, buildable React and are not a compilation risk.
+**History:** every file copied from the old Next.js project was first isolated (unedited, original relative paths preserved) under `migration/nextjs-blog-reference/`, excluded from ESLint and outside the Vite build graph, so nothing in it could compile into or affect the shipped site. `migration/` has since been deleted entirely — see "Final status" below. Nothing in it was ever reachable from `src/`; confirmed by grep both before the original move and again immediately before deletion.
 
-`migration/` is excluded from ESLint (`eslint.config.js` → `globalIgnores(['dist', 'migration'])`). It was never reachable from the Vite build graph (nothing in `src/` imported these paths even before the move — confirmed by grep prior to moving), so no separate Vite/build config exclusion was required; the ESLint ignore is the only exclusion this project's tooling needed.
-
-**Secrets check:** grepped every copied file for literal credentials, API keys, tokens, connection strings, and PEM blocks — none found. The login/upload/migrate routes read `process.env.ADMIN_EMAIL`, `process.env.ADMIN_PASSWORD`, `process.env.BLOB_READ_WRITE_TOKEN`, `process.env.KV_REST_API_URL`, and `process.env.NEXT_PUBLIC_SITE_URL` — all server-only environment variable *references*, not hardcoded values, and none of these files are in the build graph so nothing is bundled into frontend-accessible JS. No `.env`/`.env.local` files were copied alongside the code.
+**Secrets check (unchanged from the original audit, re-verified before deletion):** grepped every copied file for literal credentials, API keys, tokens, connection strings, and PEM blocks — none found, before or after. The login/upload/migrate routes read `process.env.ADMIN_EMAIL`, `process.env.ADMIN_PASSWORD`, `process.env.BLOB_READ_WRITE_TOKEN`, `process.env.KV_REST_API_URL`, and `process.env.NEXT_PUBLIC_SITE_URL` — server-only environment variable *references*, not hardcoded values. No `.env`/`.env.local` file was ever copied alongside the code, and none exists anywhere in this repo.
 
 ---
 
-## Inventory
+## Inventory — final status
 
-| Original path | Temporary path | Reuse status | Intended React replacement | Dependency requirements |
-|---|---|---|---|---|
-| `actions/blogActions.ts` | `migration/nextjs-blog-reference/actions/blogActions.ts` | Delete after refactor — keep only the function *shape* | Build-time content service: `getBlogs()` reading a static JSON/Markdown import | None (drop `next/cache`, `"use server"`, `@/data/blogService`) |
-| `actions/saveBlogAction.ts` | `migration/nextjs-blog-reference/actions/saveBlogAction.ts` | Delete | No in-browser save; content authored locally and committed | None — no client-side replacement exists for this in a static site |
-| `api/admin/login/route.ts` | `migration/nextjs-blog-reference/api/admin/login/route.ts` | Delete — critical risk (plaintext credential compare, no hashing/rate-limit) | None unless an external backend is deliberately introduced later | N/A — must never be ported client-side |
-| `api/admin/logout/route.ts` | `migration/nextjs-blog-reference/api/admin/logout/route.ts` | Delete | None — no server session to clear in this architecture | N/A |
-| `api/admin/upload/route.ts` | `migration/nextjs-blog-reference/api/admin/upload/route.ts` | Delete — high risk (unauthenticated file write if ever exposed) | Repository-managed local assets: images placed in `public/` by hand, referenced by relative path | N/A — no `@vercel/blob`, no server filesystem here |
-| `api/admin/migrate/route.ts` | `migration/nextjs-blog-reference/api/admin/migrate/route.ts` | Delete — one-off Vercel KV ops script, inapplicable | None needed | N/A — no KV store in this stack |
-| `blog/layout.tsx` | `migration/nextjs-blog-reference/blog/layout.tsx` | Delete — redundant | `SiteLayout.jsx` (already exists) + `useDocumentTitle` (already exists) | None |
-| `blog/page.tsx` | `migration/nextjs-blog-reference/blog/page.tsx` | Redundant with live route; extract JSX only | Merge refactored markup into existing `src/pages/blog/BlogIndex.jsx` | `react-router-dom` `Link` in place of `next/link`; plain `<img>` in place of `next/image`; static content import in place of RSC fetch |
-| `blog/[slug]/page.tsx` | `migration/nextjs-blog-reference/blog/[slug]/page.tsx` | Redundant with live route; extract JSX + related-posts logic only | Merge refactored markup into existing `src/pages/blog/BlogPost.jsx` | Same as above, plus: sanitize (e.g. DOMPurify) before reusing the `dangerouslySetInnerHTML` pattern if content provenance ever becomes untrusted |
-| `blog/[slug]/BlogPostClient.tsx` | `migration/nextjs-blog-reference/blog/[slug]/BlogPostClient.tsx` | Reusable with small changes — pick this Markdown-parser approach **or** `page.tsx`'s HTML-string approach, not both | Merge `renderContent()` parser into `src/pages/blog/BlogPost.jsx` if Markdown is the chosen content format | `react-router-dom` `Link` in place of `next/link`; `framer-motion` already installed |
-| `src/components/admin/AdminLayout.tsx` | `migration/nextjs-blog-reference/src/components/admin/AdminLayout.tsx` | Delete — no backend to authorize against; would be fake client-side access control | None — do not build a decorative admin dashboard | N/A unless a real external backend is introduced |
-| `src/components/admin/AdminLogin.tsx` | `migration/nextjs-blog-reference/src/components/admin/AdminLogin.tsx` | Delete — high risk by association with plaintext login route | None | N/A |
-| `src/components/admin/BlogManager.tsx` | `migration/nextjs-blog-reference/src/components/admin/BlogManager.tsx` | Delete — depends on unauthenticated Server Action delete path | None (list-only, build-time content service if ever needed) | N/A |
-| `src/components/admin/BlogEditor.tsx` | `migration/nextjs-blog-reference/src/components/admin/BlogEditor.tsx` | Delete — multiple hard server dependencies | None | `slugify` (not installed) would only matter for an offline authoring tool, not production |
-| `src/components/admin/RichTextEditor.tsx` | `migration/nextjs-blog-reference/src/components/admin/RichTextEditor.tsx` | Candidate for deletion from production; optionally repurpose as an offline-only authoring tool kept outside `src/` | None in the deployed app | `@tiptap/react`, `@tiptap/starter-kit` (not installed) — only if kept as a separate local tool |
-| `src/components/blog/BlogSEO.tsx` | `migration/nextjs-blog-reference/src/components/blog/BlogSEO.tsx` | Reusable after rewrite (concept only) | Plain `<script type="application/ld+json">` injected via `useEffect`, or a shared SEO hook | None — replace `next/script` and `process.env.NEXT_PUBLIC_*` with `import.meta.env.VITE_*` |
-| `src/components/BlogCard.tsx` | `migration/nextjs-blog-reference/src/components/BlogCard.tsx` | Reusable with small changes | Update in place, wire into `BlogIndex.jsx`/`BlogSection.jsx` | `react-router-dom` `Link` in place of `next/link`; source `BlogPost` type/shape locally instead of `@/data/blogService`; `framer-motion` already installed |
-| `src/components/BlogSection.tsx` | `migration/nextjs-blog-reference/src/components/BlogSection.tsx` | Reusable after refactor | Wire into `src/pages/Home.jsx` as a "Featured Writings" section, once content model exists | `react-router-dom` `Link`; drop `useLanguage()` (module doesn't exist in this repo, `t` is unused); build-time content service in place of `fetchBlogsList()` |
-| `src/components/blog/TableOfContents.tsx` | *(unchanged)* `src/components/blog/TableOfContents.tsx` | **Directly reusable — left in place** | None required; only needs `"use client"` dropped when actually wired up | None |
-| `src/components/blog/ShareButtons.tsx` | *(unchanged)* `src/components/blog/ShareButtons.tsx` | **Directly reusable — left in place** | None required; only needs `"use client"` dropped when actually wired up | None |
+| Original path | Status | Where the functionality lives now |
+|---|---|---|
+| `actions/blogActions.ts` | **Deleted** (commit `1ed6d40`, "admin blogs") | `src/features/blog/content.ts` — `getPublishedPosts()`/`getPostBySlug()` reading the static `BLOG_POSTS` module, no server, no delete-in-browser |
+| `actions/saveBlogAction.ts` | **Deleted** (commit `1ed6d40`) | No in-browser save. Content is hand-authored Markdown/frontmatter committed to the repo; `src/pages/dev/BlogAuthor.jsx` (dev-only, stripped from production builds) assists drafting the frontmatter+body locally |
+| `api/admin/login/route.ts` | **Deleted** (commit `1ed6d40`) | None — no backend exists to authenticate against; not reintroduced |
+| `api/admin/logout/route.ts` | **Deleted** (commit `1ed6d40`) | None |
+| `api/admin/upload/route.ts` | **Deleted** (commit `1ed6d40`) | Repository-managed local assets: images placed in `public/` by hand, referenced by relative path |
+| `api/admin/migrate/route.ts` | **Deleted** (commit `1ed6d40`) | None needed — one-off Vercel KV ops script, inapplicable to this stack |
+| `blog/layout.tsx` | **Deleted** (this pass) | `src/app/layouts/SiteLayout.jsx` + `src/utils/useSEO.js` |
+| `blog/page.tsx` | **Deleted** (this pass) — markup superseded | `src/pages/blog/BlogIndex.jsx` (live, routed at `/blog`): search, category/tag filtering, featured post, card grid, empty states |
+| `blog/[slug]/page.tsx` | **Deleted** (this pass) — markup + related-posts logic superseded | `src/pages/blog/BlogPost.jsx` (live, routed at `/blog/:slug`): related posts, prev/next nav, JSON-LD, breadcrumbs |
+| `blog/[slug]/BlogPostClient.tsx` | **Deleted** (this pass) — Markdown-parser approach superseded | `src/components/blog/MarkdownContent.tsx` + `src/features/blog/markdown.ts` (the chosen content format: Markdown, not HTML strings — resolves the conflict this audit flagged between `page.tsx` and this file) |
+| `src/components/admin/AdminLayout.tsx` | **Deleted** (commit `1ed6d40`) | None — no admin dashboard; would have been unauthorized client-side "access control" |
+| `src/components/admin/AdminLogin.tsx` | **Deleted** (commit `1ed6d40`) | None |
+| `src/components/admin/BlogManager.tsx` | **Deleted** (commit `1ed6d40`) | None |
+| `src/components/admin/BlogEditor.tsx` | **Deleted** (commit `1ed6d40`) | `src/pages/dev/BlogAuthor.jsx` — dev-only, client-side-only, no auth, no server calls, generates a Markdown file for the developer to commit by hand |
+| `src/components/admin/RichTextEditor.tsx` | **Deleted** (commit `1ed6d40`) | `src/pages/dev/BlogAuthor.jsx` uses a plain `<textarea>` against the same Markdown subset `features/blog/markdown.ts` renders, instead of carrying over the Tiptap dependency |
+| `src/components/blog/BlogSEO.tsx` | **Deleted** (this pass) — concept superseded | `src/utils/useSEO.js` — a shared hook covering title, description, canonical URL, Open Graph, Twitter Card, and JSON-LD, used by both `BlogIndex.jsx` and `BlogPost.jsx` (strictly more complete than the copied file) |
+| `src/components/BlogCard.tsx` | **Deleted** (this pass) — replaced in place | `src/components/blog/BlogCard.jsx` (live) |
+| `src/components/BlogSection.tsx` | **Deleted** (this pass) — replaced in place | `src/components/blog/BlogSection.jsx` (live component; not yet wired into `src/pages/Home.jsx` — a content decision, not a migration gap) |
+| `src/components/blog/TableOfContents.tsx` | **Migrated in place** (kept, `"use client"` was never present to strip) | `src/components/blog/TableOfContents.tsx` — used by `BlogPost.jsx` when `readingTimeMinutes` clears `TOC_MIN_READING_MINUTES` |
+| `src/components/blog/ShareButtons.tsx` | **Migrated in place** (kept, `"use client"` was never present to strip) | `src/components/blog/ShareButtons.tsx` — used by `BlogPost.jsx` |
+
+**Archived:** none. Every file was either already deleted in commit `1ed6d40` ("admin blogs") or deleted in this pass once its replacement was confirmed live and superior; no file needed to be kept around further for reference.
 
 ---
 
-## Blocking dependencies for any future reuse
+## Verification performed before deletion (this pass)
 
-None of these are installed, and none should be added just to make the isolated files compile — only add them at the point a specific piece is actually being ported in:
-
-- `next` and all `next/*` submodules — framework itself, not applicable to this Vite/React Router stack
-- `@vercel/blob`, `@vercel/kv` — Vercel-specific, meaningless on static Hostinger hosting
-- `@tiptap/react`, `@tiptap/starter-kit` — only relevant if `RichTextEditor.tsx` is deliberately kept as a dev-only offline tool
-- `slugify` — only relevant to a local/offline content-authoring step, not runtime
-- `@/data/blogService`, `@/data/authService` — never copied; this repo needs its own local content-service module and has no auth backend at all
-- `@/i18n/LanguageContext` — referenced by `BlogSection.tsx` only; this repo has no i18n layer
+- `grep -rln "migration/nextjs-blog-reference"` across `src/`, `vite.config.js`, `tsconfig.json`, `eslint.config.js` — zero matches; nothing in the active tree ever imported the reference copy.
+- `grep -rn "next/\|use server\|use client"` across `src/` — zero matches; no Next.js-specific API or directive survives anywhere in production code.
+- Diffed the remaining reference files' functionality against their live replacements (`BlogIndex.jsx`, `BlogPost.jsx`, `BlogCard.jsx`, `BlogSection.jsx`, `useSEO.js`) — every capability (search/filter, featured post, related posts, prev/next nav, TOC, share buttons, JSON-LD structured data, Open Graph/Twitter tags) is present and live, several strictly more complete than the copied originals.
+- Secrets re-scanned immediately before deletion (see above) — clean.
+- `package.json` re-checked for `next`, `@vercel/*`, `@tiptap/*`, `slugify` — none were ever installed in this project; no dependency removal was needed.
+- No `.env*` files or Next.js-style env var examples (`NEXT_PUBLIC_*`, `ADMIN_EMAIL`, etc.) exist anywhere in the repo to clean up.
+- `eslint.config.js` — removed the now-unnecessary `'migration'` entry from `globalIgnores` (only `'dist'` remains).
+- `migration/nextjs-blog-reference/` deleted via `git rm -r`, preserving full history/blame in prior commits (`git log -- migration/` still resolves).
 
 ## State after this pass
 
-- `actions/`, `api/`, `blog/` no longer exist at the repo root — fully relocated under `migration/nextjs-blog-reference/`.
-- `src/components/admin/` no longer exists — relocated.
-- `src/components/BlogCard.tsx`, `src/components/BlogSection.tsx`, `src/components/blog/BlogSEO.tsx` relocated; `src/components/blog/` now contains only `TableOfContents.tsx` and `ShareButtons.tsx`.
-- No active file under `src/` imports anything from `migration/`.
-- `npm run lint` — passes (0 errors).
-- TypeScript checking — not available; this project has no `typescript` package installed and no `tsconfig.json`, so no `tsc` step exists to run.
-- `npm run build` — passes, output unchanged from before this pass (same chunk set: `BlogIndex`, `BlogPost`, `PrivacyPolicy`, `NotFound`, `ui`, `index`).
-- No visual or routing changes were made. The blog is not implemented — `BlogIndex.jsx`/`BlogPost.jsx` remain the existing placeholders.
+- `migration/` no longer exists in the working tree.
+- `docs/NEXTJS-BLOG-REUSE-AUDIT.md` remains as the historical rationale document (per-file risk analysis); this inventory file is the closing status record.
+- `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build` all pass — see the cleanup summary in the commit this file is part of.
+- The React blog (`/blog`, `/blog/:slug`) is fully implemented and live, not a placeholder: search, category/tag filtering, featured post, related posts, table of contents, share buttons, JSON-LD, and Open Graph/Twitter metadata are all working.
