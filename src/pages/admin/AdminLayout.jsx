@@ -16,22 +16,32 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../../features/admin/useAuth';
+import { canManageUsers } from '../../features/admin/permissions';
 import { cn } from '../../utils/cn';
 
-const NAV_ITEMS = [
-  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/admin/blogs', label: 'Blogs', icon: Newspaper, end: false },
-  { label: 'Categories', icon: FolderTree, disabled: true },
-  { label: 'Tags', icon: Tag, disabled: true },
-  { label: 'Media', icon: ImageIcon, disabled: true },
-  { label: 'Users', icon: Users, disabled: true },
-  { label: 'Profile', icon: User, disabled: true },
-];
+function navItems(admin) {
+  return [
+    { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+    { to: '/admin/blogs', label: 'Blogs', icon: Newspaper, end: false },
+    { label: 'Categories', icon: FolderTree, disabled: true },
+    { label: 'Tags', icon: Tag, disabled: true },
+    { label: 'Media', icon: ImageIcon, disabled: true },
+    canManageUsers(admin)
+      ? { to: '/admin/users', label: 'Users', icon: Users, end: false }
+      : null,
+    { to: '/admin/profile', label: 'Profile', icon: User, end: false },
+  ].filter(Boolean);
+}
 
 const PAGE_TITLES = [
   { pattern: /^\/admin\/blogs\/new$/, title: 'New Blog Post' },
   { pattern: /^\/admin\/blogs\/[^/]+\/edit$/, title: 'Edit Blog Post' },
   { pattern: /^\/admin\/blogs$/, title: 'Blogs' },
+  { pattern: /^\/admin\/users\/new$/, title: 'Add User' },
+  { pattern: /^\/admin\/users\/[^/]+\/edit$/, title: 'Edit User' },
+  { pattern: /^\/admin\/users$/, title: 'Users' },
+  { pattern: /^\/admin\/profile$/, title: 'Profile' },
+  { pattern: /^\/admin\/forbidden$/, title: 'Forbidden' },
   { pattern: /^\/admin\/?$/, title: 'Dashboard' },
 ];
 
@@ -99,7 +109,7 @@ function NavItem({ item, onNavigate }) {
   );
 }
 
-function SidebarContent({ collapsed, onNavigate }) {
+function SidebarContent({ collapsed, onNavigate, items }) {
   return (
     <>
       <div className={cn('flex items-center h-16 shrink-0', collapsed ? 'justify-center px-2' : 'px-5')}>
@@ -116,12 +126,12 @@ function SidebarContent({ collapsed, onNavigate }) {
         aria-label="Admin sections"
       >
         {collapsed
-          ? NAV_ITEMS.map((item) => (
+          ? items.map((item) => (
               <div key={item.label} title={item.label}>
                 <NavItem item={item} onNavigate={onNavigate} />
               </div>
             ))
-          : NAV_ITEMS.map((item) => <NavItem key={item.label} item={item} onNavigate={onNavigate} />)}
+          : items.map((item) => <NavItem key={item.label} item={item} onNavigate={onNavigate} />)}
       </nav>
       <div className={cn('border-t border-slate-100 py-3 space-y-1', collapsed ? 'px-2' : 'px-3')}>
         <a
@@ -142,6 +152,7 @@ function SidebarContent({ collapsed, onNavigate }) {
 /** Standalone CRM shell for authenticated `/admin` pages — sidebar navigation, top bar with page title and account controls. Deliberately separate from the public `SiteLayout`. */
 export default function AdminLayout() {
   const { admin, logout } = useAuth();
+  const items = navItems(admin);
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
@@ -210,7 +221,7 @@ export default function AdminLayout() {
           collapsed ? 'w-[76px]' : 'w-64'
         )}
       >
-        <SidebarContent collapsed={collapsed} />
+        <SidebarContent collapsed={collapsed} items={items} />
         <div className="border-t border-slate-100 p-2">
           <button
             type="button"
@@ -259,7 +270,7 @@ export default function AdminLayout() {
               </button>
             </div>
             <nav className="flex-1 overflow-y-auto py-2 px-3 space-y-1" aria-label="Admin sections">
-              {NAV_ITEMS.map((item) => (
+              {items.map((item) => (
                 <NavItem key={item.label} item={item} onNavigate={() => setMobileOpen(false)} />
               ))}
             </nav>

@@ -2,11 +2,17 @@ import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '../../features/admin/AuthContext';
 import ProtectedRoute from '../../features/admin/ProtectedRoute';
+import RequirePermission from '../../features/admin/RequirePermission';
+import { canManageUsers } from '../../features/admin/permissions';
 import AdminLogin from './AdminLogin';
 import AdminLayout from './AdminLayout';
 import AdminDashboard from './AdminDashboard';
 import PostList from './posts/PostList';
 import PostEditorPlaceholder from './posts/PostEditorPlaceholder';
+import UsersList from './users/UsersList';
+import UserForm from './users/UserForm';
+import Profile from './Profile';
+import Forbidden from './Forbidden';
 
 /**
  * `/admin/*` ships in the production build so it's reachable on the live
@@ -34,6 +40,15 @@ export default function Admin() {
             <Route path="blogs" element={<PostList />} />
             <Route path="blogs/new" element={<PostEditorPlaceholder />} />
             <Route path="blogs/:id/edit" element={<PostEditorPlaceholder />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="forbidden" element={<Forbidden />} />
+            {/* Reachable by any authenticated admin, but only super_admin passes the
+                permission check — everyone else bounces to /admin/forbidden. */}
+            <Route element={<RequirePermission check={canManageUsers} />}>
+              <Route path="users" element={<UsersList />} />
+              <Route path="users/new" element={<UserForm />} />
+              <Route path="users/:id/edit" element={<UserForm />} />
+            </Route>
             {/* Unknown authenticated route: back to the dashboard rather than a blank outlet. */}
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Route>

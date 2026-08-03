@@ -45,7 +45,7 @@ try {
     $pdo = Database::getConnection();
 
     $stmt = $pdo->prepare(
-        'SELECT id, name, email, password_hash, role, is_active FROM admins WHERE email = :email'
+        'SELECT id, full_name, username, email, password_hash, role, is_active FROM admins WHERE email = :email'
     );
     $stmt->execute(['email' => $email]);
     $admin = $stmt->fetch();
@@ -73,7 +73,8 @@ try {
     json_response(200, [
         'admin' => [
             'id' => (int) $admin['id'],
-            'name' => $admin['name'],
+            'name' => $admin['full_name'],
+            'username' => $admin['username'],
             'email' => $admin['email'],
             'role' => $admin['role'],
         ],

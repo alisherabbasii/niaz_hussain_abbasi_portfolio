@@ -3,9 +3,59 @@
 export interface Admin {
   id: number;
   name: string;
+  username?: string;
   email: string;
   role: string;
 }
+
+/** Roles supported by the admin user-management module — see `backend/helpers/Permissions.php`. */
+export type AdminRole = 'super_admin' | 'admin' | 'editor';
+
+/** Shape produced by `backend/helpers/AdminUser.php::admin_user_format` — never includes password_hash. */
+export interface AdminUser {
+  id: number;
+  full_name: string;
+  username: string;
+  email: string;
+  role: AdminRole;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListAdminUsersParams {
+  page?: number;
+  per_page?: number;
+  /** Substring match against full_name/username/email. */
+  search?: string;
+  role?: AdminRole;
+  status?: 'active' | 'inactive';
+}
+
+export interface ListAdminUsersResult {
+  data: AdminUser[];
+  pagination: Pagination;
+}
+
+/** Body accepted by `backend/api/users/create.php`. */
+export interface CreateAdminUserInput {
+  full_name: string;
+  username: string;
+  email: string;
+  role: AdminRole;
+  is_active?: boolean;
+  password: string;
+  password_confirmation: string;
+}
+
+/** Body accepted by `backend/api/users/update.php`. Every field is optional — only supplied keys are changed; omitting/blanking `password` preserves the existing one. */
+export type UpdateAdminUserInput = Partial<
+  Omit<CreateAdminUserInput, 'password' | 'password_confirmation'>
+> & {
+  password?: string;
+  password_confirmation?: string;
+};
 
 export interface Pagination {
   page: number;

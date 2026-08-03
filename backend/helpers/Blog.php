@@ -139,7 +139,7 @@ function blog_resolve_author_id(PDO $pdo, mixed $authorInput, int $fallbackAdmin
 
     if (is_string($authorInput)) {
         $stmt = $pdo->prepare(
-            'SELECT id FROM admins WHERE (name = :value OR email = :value) AND is_active = 1 LIMIT 1'
+            'SELECT id FROM admins WHERE (full_name = :value OR username = :value OR email = :value) AND is_active = 1 LIMIT 1'
         );
         $stmt->execute(['value' => $authorInput]);
         $row = $stmt->fetch();
@@ -251,7 +251,7 @@ function blog_parse_datetime(mixed $value): ?string
  */
 function blog_select_base(): string
 {
-    return 'SELECT bp.*, a.name AS author_name, c.name AS category_name
+    return 'SELECT bp.*, a.full_name AS author_name, c.name AS category_name
              FROM blog_posts bp
              LEFT JOIN admins a ON a.id = bp.author_id
              LEFT JOIN categories c ON c.id = bp.category_id';

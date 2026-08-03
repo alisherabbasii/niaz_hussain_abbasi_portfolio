@@ -58,8 +58,16 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Lets screens that change the logged-in admin's own record (Profile:
+  // name/email) reflect it immediately in the header/sidebar without a full
+  // reload — pass the updated admin object straight through rather than
+  // re-fetching /auth/me.php.
+  const refreshAdmin = useCallback((updated) => {
+    setAdmin(updated);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ admin, status, sessionExpired, login, logout }}>
+    <AuthContext.Provider value={{ admin, status, sessionExpired, login, logout, refreshAdmin }}>
       {children}
     </AuthContext.Provider>
   );

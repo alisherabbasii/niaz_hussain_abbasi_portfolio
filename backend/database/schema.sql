@@ -17,17 +17,26 @@ CREATE TABLE IF NOT EXISTS migrations (
   applied_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Admin users (multi-user login).
+-- Admin users (multi-user login). Role/status columns power the
+-- multi-admin user-management module — see backend/helpers/Permissions.php
+-- and backend/api/users/**. Databases provisioned before that module
+-- shipped are brought up to this shape by
+-- backend/database/migrations/002_admin_user_management.php (run via
+-- backend/migrate.php), not by re-running this file.
 CREATE TABLE IF NOT EXISTS admins (
   id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name            VARCHAR(120)  NOT NULL,
+  full_name       VARCHAR(120)  NOT NULL,
+  username        VARCHAR(60)   NOT NULL UNIQUE,
   email           VARCHAR(190)  NOT NULL UNIQUE,
   password_hash   VARCHAR(255)  NOT NULL,
-  role            ENUM('owner','admin') NOT NULL DEFAULT 'admin',
+  role            ENUM('super_admin','admin','editor') NOT NULL DEFAULT 'admin',
   is_active       TINYINT(1)    NOT NULL DEFAULT 1,
   last_login_at   DATETIME      NULL,
   created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_admins_is_active (is_active),
+  INDEX idx_admins_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Categories (first-class, one per post).

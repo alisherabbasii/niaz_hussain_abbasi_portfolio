@@ -7,5 +7,7 @@ export * as blogService from './blogService';
 export * as uploadService from './uploadService';
 export * as categoryService from './categoryService';
 export * as tagService from './tagService';
+export * as userService from './userService';
+export * as profileService from './profileService';
 
 export type * from './types';

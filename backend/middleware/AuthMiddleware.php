@@ -26,7 +26,7 @@ function auth_current_admin(): ?array
     }
 
     $pdo = Database::getConnection();
-    $stmt = $pdo->prepare('SELECT id, name, email, role, is_active FROM admins WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT id, full_name, username, email, role, is_active FROM admins WHERE id = :id');
     $stmt->execute(['id' => $adminId]);
     $admin = $stmt->fetch();
 

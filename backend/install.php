@@ -139,6 +139,7 @@ try {
     installer_log('[4/5] Seeding first admin user...');
     $adminEmail = env_get('INSTALL_ADMIN_EMAIL', required: true);
     $adminName = env_get('INSTALL_ADMIN_NAME', 'Site Admin');
+    $adminUsername = env_get('INSTALL_ADMIN_USERNAME', strtolower((string) strstr($adminEmail, '@', true)));
     $adminPassword = env_get('INSTALL_ADMIN_PASSWORD', required: true);
 
     if (strlen($adminPassword) < 8) {
@@ -155,14 +156,15 @@ try {
         $passwordHash = password_hash($adminPassword, PASSWORD_DEFAULT);
 
         $insert = $pdo->prepare(
-            'INSERT INTO admins (name, email, password_hash, role, is_active)
-             VALUES (:name, :email, :password_hash, :role, 1)'
+            'INSERT INTO admins (full_name, username, email, password_hash, role, is_active)
+             VALUES (:full_name, :username, :email, :password_hash, :role, 1)'
         );
         $insert->execute([
-            'name' => $adminName,
+            'full_name' => $adminName,
+            'username' => $adminUsername,
             'email' => $adminEmail,
             'password_hash' => $passwordHash,
-            'role' => $isFirstAdmin ? 'owner' : 'admin',
+            'role' => $isFirstAdmin ? 'super_admin' : 'admin',
         ]);
         installer_log("      Admin '{$adminEmail}' created.");
     } else {

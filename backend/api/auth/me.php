@@ -31,7 +31,8 @@ try {
     json_response(200, [
         'admin' => [
             'id' => (int) $admin['id'],
-            'name' => $admin['name'],
+            'name' => $admin['full_name'],
+            'username' => $admin['username'],
             'email' => $admin['email'],
             'role' => $admin['role'],
         ],
