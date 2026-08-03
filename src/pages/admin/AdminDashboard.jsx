@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Check, Copy, Download, RotateCcw } from 'lucide-react';
-import { Container, PageSection, Badge, Input, Textarea } from '../../components/ui';
+import { AlertTriangle, Check, Copy, Download, LogOut, RotateCcw } from 'lucide-react';
+import { Container, PageSection, Badge, Input, Textarea, Button } from '../../components/ui';
 import { CategoryBadge, BlogMeta, TagList, MarkdownContent } from '../../components/blog';
 import { normalizeBlogPost } from '../../features/blog/schema';
 import { generateSlug } from '../../features/blog/utils';
@@ -29,20 +29,14 @@ const INITIAL_FIELDS = {
   content: '',
 };
 
-/** JSON string-literal escaping doubles as valid YAML flow-scalar quoting. */
+/** JSON string-literal escaping doubles as valid frontmatter flow-scalar quoting
+ * (the same convention `scripts/blog/lib/frontmatter.mjs` parses on the other end). */
 function yamlString(value) {
   return JSON.stringify(value ?? '');
 }
 
-function jsStringLiteral(value) {
-  return `'${String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n')}'`;
-}
-
-function jsTemplateLiteral(value) {
-  return `\`${String(value ?? '').replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${')}\``;
-}
-
-/** Builds a standalone `.md` file: YAML frontmatter matching `BlogPostFrontmatter` field names, then the body. */
+/** Builds a standalone `.md` file: frontmatter matching `content/blog/*.md`'s
+ * convention, then the body. */
 function buildMarkdownFile(fields, tags) {
   const lines = ['---'];
   lines.push(`title: ${yamlString(fields.title)}`);
@@ -57,25 +51,6 @@ function buildMarkdownFile(fields, tags) {
   if (fields.coverImage) lines.push(`coverImage: ${yamlString(fields.coverImage)}`);
   if (fields.coverImageAlt) lines.push(`coverImageAlt: ${yamlString(fields.coverImageAlt)}`);
   lines.push('---', '', fields.content ?? '');
-  return lines.join('\n');
-}
-
-/** Builds a `BlogPostFrontmatter` object literal, ready to paste into `src/data/blog/posts.ts`. */
-function buildPostsEntrySnippet(fields, tags) {
-  const lines = ['{'];
-  lines.push(`  title: ${jsStringLiteral(fields.title)},`);
-  lines.push(`  slug: ${jsStringLiteral(fields.slug)},`);
-  lines.push(`  description: ${jsStringLiteral(fields.description)},`);
-  lines.push(`  date: ${jsStringLiteral(fields.date)},`);
-  lines.push(`  author: ${jsStringLiteral(fields.author)},`);
-  lines.push(`  category: ${jsStringLiteral(fields.category)},`);
-  lines.push(`  tags: [${tags.map(jsStringLiteral).join(', ')}],`);
-  lines.push(`  featured: ${Boolean(fields.featured)},`);
-  lines.push(`  draft: ${Boolean(fields.draft)},`);
-  if (fields.coverImage) lines.push(`  coverImage: ${jsStringLiteral(fields.coverImage)},`);
-  if (fields.coverImageAlt) lines.push(`  coverImageAlt: ${jsStringLiteral(fields.coverImageAlt)},`);
-  lines.push(`  content: ${jsTemplateLiteral(fields.content)},`);
-  lines.push('}');
   return lines.join('\n');
 }
 
@@ -94,59 +69,20 @@ const Toggle = ({ label, hint, checked, onChange }) => (
   </label>
 );
 
-const OutputPanel = ({ label, hint, value, filename, onDownload, copyKey, copiedKey, onCopy }) => (
-  <div className="rounded-2xl border border-slate-100 bg-white p-5">
-    <div className="flex items-start justify-between gap-3 mb-3">
-      <div>
-        <h3 className="font-bold text-primary text-sm">{label}</h3>
-        {hint && <p className="text-xs text-slate-500 mt-0.5">{hint}</p>}
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <button
-          type="button"
-          onClick={() => onCopy(value, copyKey)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-        >
-          {copiedKey === copyKey ? <Check size={13} /> : <Copy size={13} />}
-          {copiedKey === copyKey ? 'Copied' : 'Copy'}
-        </button>
-        {onDownload && (
-          <button
-            type="button"
-            onClick={() => onDownload(value, filename)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-accent/10 text-accent-strong hover:bg-accent/20 transition-colors"
-          >
-            <Download size={13} />
-            Download
-          </button>
-        )}
-      </div>
-    </div>
-    <textarea
-      readOnly
-      value={value}
-      rows={10}
-      className="w-full font-mono text-xs leading-relaxed bg-slate-50 border border-slate-100 rounded-xl p-3 resize-y text-slate-700"
-    />
-  </div>
-);
-
 /**
- * Local, dev-only content authoring aid. Generates a Markdown file with
- * frontmatter (and a matching `posts.ts` object literal) entirely in the
- * browser — no network calls, no filesystem writes, no auth. Nothing here
- * publishes anything: the developer copies/downloads the output, adds it to
- * `src/data/blog/posts.ts` by hand, then commits and redeploys.
- *
- * Only reachable when `import.meta.env.DEV` is true (see `src/app/router.jsx`),
- * so this page and its route never ship in a production build.
+ * Production-included content-drafting tool, gated behind the login screen in
+ * `Admin.jsx`. It still doesn't publish anything by itself: generate the
+ * Markdown file here, download it, commit it into `content/blog/`, then
+ * follow the rest of docs/BLOG-PUBLISHING-WORKFLOW.md (validate, flip draft
+ * to false, build, deploy). There is no filesystem write and no network call
+ * from this page — the download is the only output.
  */
-export default function BlogAuthor() {
-  useDocumentTitle('Blog Author (Dev)');
+export default function AdminDashboard({ onLock }) {
+  useDocumentTitle('Admin — Blog');
 
   const [fields, setFields] = useState(INITIAL_FIELDS);
   const [slugTouched, setSlugTouched] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   const update = (patch) => setFields((current) => ({ ...current, ...patch }));
 
@@ -190,24 +126,23 @@ export default function BlogAuthor() {
   );
 
   const markdownFile = useMemo(() => buildMarkdownFile(fields, tags), [fields, tags]);
-  const postsEntry = useMemo(() => buildPostsEntrySnippet(fields, tags), [fields, tags]);
 
-  const handleCopy = async (text, key) => {
+  const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(text);
-      setCopiedKey(key);
-      setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 1500);
+      await navigator.clipboard.writeText(markdownFile);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     } catch {
       // Clipboard API can be unavailable (e.g. insecure context); download still works.
     }
   };
 
-  const handleDownload = (text, filename) => {
-    const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+  const handleDownload = () => {
+    const blob = new Blob([markdownFile], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = filename;
+    link.download = `${fields.slug || 'untitled-post'}.md`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -215,13 +150,18 @@ export default function BlogAuthor() {
   return (
     <PageSection>
       <Container className="max-w-6xl">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight">Blog Author</h1>
-          <Badge variant="warning" size="sm">Dev only</Badge>
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight">Blog Admin</h1>
+            <Badge variant="warning" size="sm">No backend</Badge>
+          </div>
+          <Button variant="outline" size="sm" icon={LogOut} onClick={onLock}>
+            Log out
+          </Button>
         </div>
         <p className="text-slate-500 font-light mb-6 max-w-2xl">
-          Draft a post locally and generate the frontmatter + Markdown for it. Nothing on this page
-          saves anything — copy or download the output when you're happy with it.
+          Draft a post and generate its Markdown file. Nothing on this page saves anything on its
+          own — copy or download the output, then follow the steps below.
         </p>
 
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 flex items-start gap-3 mb-10">
@@ -229,12 +169,15 @@ export default function BlogAuthor() {
           <div className="text-sm text-amber-900">
             <p className="font-bold">This does not publish anything.</p>
             <p className="mt-1 text-amber-800">
-              This site has no backend, admin panel, or CMS — posts are a static array in{' '}
-              <code className="bg-amber-100 px-1 py-0.5 rounded">src/data/blog/posts.ts</code>. Copy the
-              generated entry below into that file (or save the Markdown file for reference), then commit
-              and deploy. A cover image path must point at a file you've placed in{' '}
-              <code className="bg-amber-100 px-1 py-0.5 rounded">public/blog-images/</code> yourself — this
-              tool never uploads or writes files anywhere.
+              This site has no backend, database, or real login — posts are Markdown files in{' '}
+              <code className="bg-amber-100 px-1 py-0.5 rounded">content/blog/</code>. Download the file below,
+              save it as <code className="bg-amber-100 px-1 py-0.5 rounded">content/blog/&#123;slug&#125;.md</code>,
+              then run <code className="bg-amber-100 px-1 py-0.5 rounded">npm run blog:validate</code>, commit, and
+              rebuild + redeploy. See{' '}
+              <code className="bg-amber-100 px-1 py-0.5 rounded">docs/BLOG-PUBLISHING-WORKFLOW.md</code> for the full
+              sequence. A cover image path must point at a file placed under{' '}
+              <code className="bg-amber-100 px-1 py-0.5 rounded">public/blog-images/</code> — this tool never
+              uploads or writes files anywhere.
             </p>
           </div>
         </div>
@@ -272,12 +215,12 @@ export default function BlogAuthor() {
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   label="Category"
-                  list="blog-author-category-suggestions"
+                  list="admin-category-suggestions"
                   value={fields.category}
                   onChange={(e) => update({ category: e.target.value })}
                   placeholder="E.g. Survey Engineering"
                 />
-                <datalist id="blog-author-category-suggestions">
+                <datalist id="admin-category-suggestions">
                   {KNOWN_BLOG_CATEGORIES.map((c) => (
                     <option key={c} value={c} />
                   ))}
@@ -304,7 +247,7 @@ export default function BlogAuthor() {
                   label="Cover Image Path"
                   value={fields.coverImage}
                   onChange={(e) => update({ coverImage: e.target.value })}
-                  placeholder="/blog-images/example-cover.jpg"
+                  placeholder="/blog-images/example-slug/cover.jpg"
                   hint="A relative path to a file you place under public/blog-images/ — not an upload."
                 />
                 {fields.coverImage && (
@@ -364,25 +307,38 @@ export default function BlogAuthor() {
               </div>
             )}
 
-            <OutputPanel
-              label="posts.ts entry"
-              hint="Paste as a new element in the BLOG_POSTS array."
-              value={postsEntry}
-              copyKey="ts"
-              copiedKey={copiedKey}
-              onCopy={handleCopy}
-            />
-
-            <OutputPanel
-              label="Markdown file"
-              hint="Frontmatter + body, for reference or an external editor."
-              value={markdownFile}
-              filename={`${fields.slug || 'untitled-post'}.md`}
-              onDownload={handleDownload}
-              copyKey="md"
-              copiedKey={copiedKey}
-              onCopy={handleCopy}
-            />
+            <div className="rounded-2xl border border-slate-100 bg-white p-5">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="font-bold text-primary text-sm">content/blog/{fields.slug || '{slug}'}.md</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Frontmatter + body — save this into content/blog/.</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                  >
+                    {copied ? <Check size={13} /> : <Copy size={13} />}
+                    {copied ? 'Copied' : 'Copy'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-accent/10 text-accent-strong hover:bg-accent/20 transition-colors"
+                  >
+                    <Download size={13} />
+                    Download
+                  </button>
+                </div>
+              </div>
+              <textarea
+                readOnly
+                value={markdownFile}
+                rows={12}
+                className="w-full font-mono text-xs leading-relaxed bg-slate-50 border border-slate-100 rounded-xl p-3 resize-y text-slate-700"
+              />
+            </div>
 
             {validation.valid && validation.data && (
               <div className="rounded-2xl border border-slate-100 bg-white p-6 md:p-8">

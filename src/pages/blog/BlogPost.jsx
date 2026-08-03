@@ -11,7 +11,7 @@ import {
   TableOfContents,
   TagList,
 } from '../../components/blog';
-import { getPostBySlug, getPublishedPosts } from '../../features/blog/content';
+import { getAnyPostBySlug, getPostBySlug, getPublishedPosts } from '../../features/blog/content';
 import { formatDate, getRelatedPosts } from '../../features/blog/utils';
 import { TOC_MIN_READING_MINUTES } from '../../features/blog/constants';
 import { useSEO } from '../../utils/useSEO';
@@ -20,7 +20,10 @@ const publishedPosts = getPublishedPosts();
 
 const BlogPost = () => {
   const { slug } = useParams();
-  const post = getPostBySlug(slug);
+  // Drafts render here in dev only, so a post-in-progress can be previewed at its
+  // real URL before `draft` is flipped to `false`. Production builds never see a
+  // draft this way — `getPostBySlug` (published-only) is used instead.
+  const post = import.meta.env.DEV ? getAnyPostBySlug(slug) : getPostBySlug(slug);
 
   const relatedPosts = useMemo(() => (post ? getRelatedPosts(post, publishedPosts) : []), [post]);
 
@@ -140,8 +143,13 @@ const BlogPost = () => {
         </nav>
 
         <header className="mb-10">
-          <div className="mb-5">
+          <div className="mb-5 flex items-center gap-2">
             <CategoryBadge category={post.category} />
+            {post.draft && (
+              <Badge variant="warning" size="sm">
+                Draft — dev preview only, not on the live site
+              </Badge>
+            )}
           </div>
 
           <h1 className="text-3xl md:text-4xl lg:text-[2.75rem] font-extrabold text-primary mb-5 leading-[1.15] tracking-tight">

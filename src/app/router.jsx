@@ -11,11 +11,11 @@ const BlogIndex = lazy(() => import('../pages/blog/BlogIndex'));
 const BlogPost = lazy(() => import('../pages/blog/BlogPost'));
 const NotFound = lazy(() => import('../pages/NotFound'));
 
-// Local authoring aid, dev-server only — never linked from navigation. Guarding both
-// the dynamic import and the route registration behind this constant lets Vite's
-// production build fold the branch to `false` and drop the page from the bundle
-// entirely (verified by inspecting `dist/` after a production build).
-const BlogAuthor = import.meta.env.DEV ? lazy(() => import('../pages/dev/BlogAuthor')) : null;
+// Content-drafting tool, gated by a client-side-only login (see
+// src/features/admin/auth.ts) — reachable on the live site by URL, but never
+// linked from navigation and marked noindex (Admin.jsx) so it doesn't surface
+// in search results.
+const Admin = lazy(() => import('../pages/admin/Admin'));
 
 const AppRouter = () => (
   <BrowserRouter>
@@ -25,7 +25,7 @@ const AppRouter = () => (
         <Route path="privacy-policy" element={<PrivacyPolicy />} />
         <Route path="blog" element={<BlogIndex />} />
         <Route path="blog/:slug" element={<BlogPost />} />
-        {import.meta.env.DEV && <Route path="dev/blog-author" element={<BlogAuthor />} />}
+        <Route path="admin" element={<Admin />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

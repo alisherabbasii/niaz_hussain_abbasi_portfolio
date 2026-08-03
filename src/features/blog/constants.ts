@@ -1,13 +1,8 @@
-/** Known categories from the previous content model. Not an enum — authors
- * may introduce new categories; this is only used to power a select/suggestion
- * UI, never for validation rejection. */
-export const KNOWN_BLOG_CATEGORIES = [
-  'Sufism',
-  'Leadership',
-  'Life Lessons',
-  'Spiritual Thoughts',
-  'Community',
-];
+/** Categories currently in use across `content/blog/*.md`. Not an enum — authors
+ * may introduce new categories; this only powers a select/suggestion UI and the
+ * `blog:validate` "unknown category" warning, never a hard validation rejection.
+ * Keep in sync with `scripts/blog/lib/constants.mjs`. */
+export const KNOWN_BLOG_CATEGORIES = ['Survey Engineering', 'Document Control', 'Site Safety', 'Leadership'];
 
 export const DEFAULT_WORDS_PER_MINUTE = 200;
 
