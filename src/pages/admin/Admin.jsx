@@ -5,6 +5,8 @@ import ProtectedRoute from '../../features/admin/ProtectedRoute';
 import AdminLogin from './AdminLogin';
 import AdminLayout from './AdminLayout';
 import AdminDashboard from './AdminDashboard';
+import PostList from './posts/PostList';
+import PostEditorPlaceholder from './posts/PostEditorPlaceholder';
 
 /**
  * `/admin/*` ships in the production build so it's reachable on the live
@@ -29,6 +31,9 @@ export default function Admin() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
+            <Route path="posts" element={<PostList />} />
+            <Route path="posts/new" element={<PostEditorPlaceholder />} />
+            <Route path="posts/:id/edit" element={<PostEditorPlaceholder />} />
           </Route>
         </Route>
       </Routes>

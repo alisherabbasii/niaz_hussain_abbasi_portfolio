@@ -36,6 +36,8 @@ export interface BlogPost {
 export interface ListBlogPostsParams {
   page?: number;
   per_page?: number;
+  /** Substring match against title/description/content. */
+  search?: string;
   category?: string;
   tag?: string;
   featured?: boolean;

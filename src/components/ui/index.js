@@ -11,3 +11,4 @@ export { default as Input } from './Input';
 export { default as Textarea } from './Textarea';
 export { default as SkipToContent } from './SkipToContent';
 export { default as Skeleton } from './Skeleton';
+export { default as Modal } from './Modal';

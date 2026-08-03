@@ -14,6 +14,7 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
  * Query params (all optional):
  *   page       int, default 1
  *   per_page   int, default 10, max 50
+ *   search     substring match against title/description/content
  *   category   filter by category name
  *   tag        filter by tag name
  *   featured   "1"/"0"/"true"/"false"
@@ -42,6 +43,18 @@ try {
 
     $conditions = [];
     $params = [];
+
+    $search = trim((string) ($_GET['search'] ?? ''));
+    if ($search !== '') {
+        // Real (non-emulated) prepared statements can't reuse one named
+        // placeholder more than once per query, so each LIKE gets its own
+        // parameter bound to the same value.
+        $conditions[] = '(bp.title LIKE :search_title OR bp.description LIKE :search_description OR bp.content LIKE :search_content)';
+        $searchTerm = '%' . $search . '%';
+        $params['search_title'] = $searchTerm;
+        $params['search_description'] = $searchTerm;
+        $params['search_content'] = $searchTerm;
+    }
 
     $category = trim((string) ($_GET['category'] ?? ''));
     if ($category !== '') {
