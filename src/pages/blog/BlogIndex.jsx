@@ -1,14 +1,12 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
-import { Container, PageSection, Button, Input } from '../../components/ui';
+import { Container, PageSection, Button, Input, Skeleton } from '../../components/ui';
 import { BlogGrid, BlogEmptyState, FeaturedBlogCard, TagList } from '../../components/blog';
-import { getPublishedPosts } from '../../features/blog/content';
-import { filterByCategory, filterByTag, filterFeaturedPosts } from '../../features/blog/utils';
+import { listPosts } from '../../api/blogService';
+import { filterByCategory, filterByTag, filterFeaturedPosts, toDisplayPost } from '../../features/blog/utils';
 import { useSEO } from '../../utils/useSEO';
 import { cn } from '../../utils/cn';
-
-const publishedPosts = getPublishedPosts();
 
 const CATEGORY_PILL_CLASSES =
   'px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide border transition-colors';
@@ -20,22 +18,44 @@ const BlogIndex = () => {
   const tag = searchParams.get('tag') ?? '';
   const hasActiveFilters = Boolean(query || category || tag);
 
+  const [publishedPosts, setPublishedPosts] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    // Anonymous callers only ever get published posts back (see blog/index.php)
+    // — per_page is generous since there's no dedicated categories/tags
+    // endpoint yet to build the filter pills from.
+    listPosts({ per_page: 100 })
+      .then((result) => {
+        if (cancelled) return;
+        setPublishedPosts(result.data.map(toDisplayPost));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError('Could not load articles. Please try again.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const categories = useMemo(
-    () => [...new Set(publishedPosts.map((post) => post.category))].sort((a, b) => a.localeCompare(b)),
-    []
+    () => [...new Set((publishedPosts ?? []).map((post) => post.category))].filter(Boolean).sort((a, b) => a.localeCompare(b)),
+    [publishedPosts]
   );
   const tags = useMemo(
-    () => [...new Set(publishedPosts.flatMap((post) => post.tags))].sort((a, b) => a.localeCompare(b)),
-    []
+    () => [...new Set((publishedPosts ?? []).flatMap((post) => post.tags))].sort((a, b) => a.localeCompare(b)),
+    [publishedPosts]
   );
 
   const featuredPost = useMemo(
-    () => filterFeaturedPosts(publishedPosts, 1)[0] ?? publishedPosts[0] ?? null,
-    []
+    () => filterFeaturedPosts(publishedPosts ?? [], 1)[0] ?? publishedPosts?.[0] ?? null,
+    [publishedPosts]
   );
 
   const filteredPosts = useMemo(() => {
-    let result = publishedPosts;
+    let result = publishedPosts ?? [];
     if (category) result = filterByCategory(result, category);
     if (tag) result = filterByTag(result, tag);
 
@@ -49,7 +69,7 @@ const BlogIndex = () => {
       );
     }
     return result;
-  }, [category, tag, query]);
+  }, [publishedPosts, category, tag, query]);
 
   const gridPosts = hasActiveFilters
     ? filteredPosts
@@ -167,6 +187,12 @@ const BlogIndex = () => {
           </div>
         )}
 
+        {error && (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 mb-8 text-sm font-semibold text-rose-700">
+            {error}
+          </div>
+        )}
+
         {!hasActiveFilters && featuredPost && (
           <section className="mb-16">
             <p className="eyebrow mb-6">Featured</p>
@@ -179,34 +205,42 @@ const BlogIndex = () => {
             <h2 className="text-2xl font-bold text-primary">
               {hasActiveFilters ? 'Results' : 'Latest Articles'}
             </h2>
-            {hasActiveFilters && (
+            {hasActiveFilters && publishedPosts && (
               <span className="text-sm text-slate-500 font-medium shrink-0">
                 {gridPosts.length} {gridPosts.length === 1 ? 'article' : 'articles'} found
               </span>
             )}
           </div>
 
-          <BlogGrid
-            posts={gridPosts}
-            emptyState={
-              <BlogEmptyState
-                icon={Search}
-                title={hasActiveFilters ? 'No matching articles' : 'No articles yet'}
-                description={
-                  hasActiveFilters
-                    ? "Nothing matches this search or filter combination — try clearing it."
-                    : 'Nothing has been published here yet — check back soon.'
-                }
-                action={
-                  hasActiveFilters && (
-                    <Button onClick={clearFilters} variant="outline" size="sm">
-                      Clear filters
-                    </Button>
-                  )
-                }
-              />
-            }
-          />
+          {!publishedPosts && !error ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} variant="block" height={280} />
+              ))}
+            </div>
+          ) : (
+            <BlogGrid
+              posts={gridPosts}
+              emptyState={
+                <BlogEmptyState
+                  icon={Search}
+                  title={hasActiveFilters ? 'No matching articles' : 'No articles yet'}
+                  description={
+                    hasActiveFilters
+                      ? "Nothing matches this search or filter combination — try clearing it."
+                      : 'Nothing has been published here yet — check back soon.'
+                  }
+                  action={
+                    hasActiveFilters && (
+                      <Button onClick={clearFilters} variant="outline" size="sm">
+                        Clear filters
+                      </Button>
+                    )
+                  }
+                />
+              }
+            />
+          )}
         </section>
       </Container>
     </PageSection>

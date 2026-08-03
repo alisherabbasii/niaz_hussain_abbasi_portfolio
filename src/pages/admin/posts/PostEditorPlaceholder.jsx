@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Wrench, ArrowLeft } from 'lucide-react';
-import { Container, PageSection, Button, Badge } from '../../../components/ui';
+import { Container, Button, Badge } from '../../../components/ui';
 import { getPostById } from '../../../api/blogService';
 import { useDocumentTitle } from '../../../utils/useDocumentTitle';
 
 /**
- * Stand-in for `/admin/posts/new` and `/admin/posts/:id/edit` — the rich
+ * Stand-in for `/admin/blogs/new` and `/admin/blogs/:id/edit` — the rich
  * content editor itself isn't built yet. This only surfaces which post (if
  * any) was targeted, so Create/Edit aren't dead links, without offering any
  * form or save action.
@@ -33,7 +33,7 @@ export default function PostEditorPlaceholder() {
   }, [id]);
 
   return (
-    <PageSection>
+    <div className="py-8 md:py-10">
       <Container className="max-w-2xl">
         <div className="rounded-2xl border border-slate-100 bg-white p-8 md:p-10 text-center">
           <div className="mx-auto mb-6 w-14 h-14 rounded-2xl bg-accent/10 text-accent-strong flex items-center justify-center">
@@ -65,13 +65,13 @@ export default function PostEditorPlaceholder() {
           </p>
 
           <div className="flex items-center justify-center gap-3">
-            <Button to="/admin/posts" variant="outline" icon={ArrowLeft} iconPosition="leading">
-              Back to posts
+            <Button to="/admin/blogs" variant="outline" icon={ArrowLeft} iconPosition="leading">
+              Back to blogs
             </Button>
             <Badge variant="warning" size="sm">Coming soon</Badge>
           </div>
         </div>
       </Container>
-    </PageSection>
+    </div>
   );
 }

@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   Star,
 } from 'lucide-react';
-import { Container, PageSection, Button, Badge, Input, Skeleton } from '../../../components/ui';
+import { Container, Button, Badge, Input, Skeleton } from '../../../components/ui';
 import { CategoryBadge, BlogEmptyState } from '../../../components/blog';
 import { listPosts, createPost, deletePost } from '../../../api/blogService';
 import { formatDate } from '../../../features/blog/utils';
@@ -242,14 +242,14 @@ export default function PostList() {
   };
 
   return (
-    <PageSection>
+    <div className="py-8 md:py-10">
       <Container className="max-w-6xl">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight mb-2">Posts</h1>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight mb-2">Blogs</h1>
             <p className="text-slate-500 font-light">Search, filter, and manage every post.</p>
           </div>
-          <Button to="/admin/posts/new" icon={Plus} iconPosition="leading">
+          <Button to="/admin/blogs/new" icon={Plus} iconPosition="leading">
             Create post
           </Button>
         </div>
@@ -377,7 +377,7 @@ export default function PostList() {
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-1.5">
                         <RowActionButton label="Preview" icon={Eye} onClick={() => setPreviewPost(post)} />
-                        <RowActionButton label="Edit" icon={Pencil} to={`/admin/posts/${post.id}/edit`} />
+                        <RowActionButton label="Edit" icon={Pencil} to={`/admin/blogs/${post.id}/edit`} />
                         <RowActionButton
                           label="Duplicate"
                           icon={Copy}
@@ -439,6 +439,6 @@ export default function PostList() {
         danger
         busy={busyId === pendingDelete?.id}
       />
-    </PageSection>
+    </div>
   );
 }

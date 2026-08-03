@@ -8,6 +8,7 @@ import {
   SLUG_PATTERN,
 } from './constants';
 import type { BlogPost } from './types';
+import type { BlogPost as ApiBlogPost } from '../../api/types';
 
 /**
  * Deterministically derives a URL slug from a title: lowercase, diacritics
@@ -153,4 +154,32 @@ export function getRelatedPosts(
   });
 
   return scored.slice(0, limit).map(({ candidate }) => candidate);
+}
+
+/**
+ * Adapts a `backend/api/blog/*` response (see `src/api/types.ts`) into the
+ * normalized `BlogPost` shape the display components in `components/blog`
+ * were built against (field names inherited from the pre-CMS static-content
+ * model). The API doesn't serve a cover image yet (`blog_format_post` never
+ * selects `cover_image_path`/`cover_image_alt`), so that's always null here
+ * until the backend exposes it.
+ */
+export function toDisplayPost(apiPost: ApiBlogPost): BlogPost {
+  return {
+    title: apiPost.title,
+    slug: apiPost.slug,
+    description: apiPost.excerpt,
+    content: apiPost.content,
+    publishedAt: apiPost.publish_date ?? apiPost.created_at,
+    updatedAt: apiPost.updated_at !== apiPost.created_at ? apiPost.updated_at : null,
+    author: apiPost.author ?? '',
+    category: apiPost.category ?? '',
+    tags: apiPost.tags,
+    coverImage: null,
+    coverImageAlt: '',
+    featured: apiPost.featured,
+    draft: apiPost.draft,
+    keywords: apiPost.tags,
+    readingTimeMinutes: calculateReadingTimeMinutes(apiPost.content),
+  };
 }

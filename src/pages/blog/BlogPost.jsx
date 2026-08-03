@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ChevronRight, FileText, RefreshCw } from 'lucide-react';
 import { Container, PageSection, Button, Badge } from '../../components/ui';
@@ -11,21 +11,57 @@ import {
   TableOfContents,
   TagList,
 } from '../../components/blog';
-import { getAnyPostBySlug, getPostBySlug, getPublishedPosts } from '../../features/blog/content';
-import { formatDate, getRelatedPosts } from '../../features/blog/utils';
+import { getPostBySlug, listPosts } from '../../api/blogService';
+import { isHttpError } from '../../api/httpError';
+import { formatDate, getRelatedPosts, toDisplayPost } from '../../features/blog/utils';
 import { TOC_MIN_READING_MINUTES } from '../../features/blog/constants';
 import { useSEO } from '../../utils/useSEO';
 
-const publishedPosts = getPublishedPosts();
-
 const BlogPost = () => {
   const { slug } = useParams();
-  // Drafts render here in dev only, so a post-in-progress can be previewed at its
-  // real URL before `draft` is flipped to `false`. Production builds never see a
-  // draft this way — `getPostBySlug` (published-only) is used instead.
-  const post = import.meta.env.DEV ? getAnyPostBySlug(slug) : getPostBySlug(slug);
+  const [post, setPost] = useState(null);
+  const [notFound, setNotFound] = useState(false);
+  const [publishedPosts, setPublishedPosts] = useState([]);
 
-  const relatedPosts = useMemo(() => (post ? getRelatedPosts(post, publishedPosts) : []), [post]);
+  // Reset for a new slug during render (not inside the effect below) per
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  // — avoids an extra render pass from a setState-in-effect.
+  const [loadedSlug, setLoadedSlug] = useState(slug);
+  if (slug !== loadedSlug) {
+    setLoadedSlug(slug);
+    setPost(null);
+    setNotFound(false);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // show.php already returns a draft to a logged-in admin and 404s it for
+    // everyone else, so there's no separate dev-only draft-preview path here
+    // the way there was for the old static-markdown content model.
+    getPostBySlug(slug)
+      .then((data) => {
+        if (!cancelled) setPost(toDisplayPost(data));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (isHttpError(err) && err.status === 404) setNotFound(true);
+      });
+
+    listPosts({ per_page: 100 })
+      .then((result) => {
+        if (!cancelled) setPublishedPosts(result.data.map(toDisplayPost));
+      })
+      .catch(() => {
+        // Related-articles/prev-next navigation just won't show — the post itself still renders.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  const relatedPosts = useMemo(() => (post ? getRelatedPosts(post, publishedPosts) : []), [post, publishedPosts]);
 
   const { previousPost, nextPost } = useMemo(() => {
     if (!post) return { previousPost: null, nextPost: null };
@@ -35,7 +71,7 @@ const BlogPost = () => {
       previousPost: publishedPosts[index + 1] ?? null,
       nextPost: publishedPosts[index - 1] ?? null,
     };
-  }, [post]);
+  }, [post, publishedPosts]);
 
   const canonicalPath = `/blog/${slug}`;
 
@@ -69,7 +105,7 @@ const BlogPost = () => {
   }, [post]);
 
   useSEO({
-    title: post ? post.title : 'Post not found',
+    title: post ? post.title : notFound ? 'Post not found' : 'Loading…',
     description: post ? post.description : "There's no published post at this address.",
     path: post ? canonicalPath : undefined,
     image: post?.coverImage ?? undefined,
@@ -79,6 +115,18 @@ const BlogPost = () => {
     author: post?.author,
     jsonLd,
   });
+
+  if (!post && !notFound) {
+    return (
+      <PageSection center>
+        <div
+          className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-accent-strong animate-spin"
+          role="status"
+          aria-label="Loading…"
+        />
+      </PageSection>
+    );
+  }
 
   if (!post) {
     return (

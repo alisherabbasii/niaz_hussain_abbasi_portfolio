@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '../../features/admin/AuthContext';
 import ProtectedRoute from '../../features/admin/ProtectedRoute';
 import AdminLogin from './AdminLogin';
@@ -31,9 +31,11 @@ export default function Admin() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
-            <Route path="posts" element={<PostList />} />
-            <Route path="posts/new" element={<PostEditorPlaceholder />} />
-            <Route path="posts/:id/edit" element={<PostEditorPlaceholder />} />
+            <Route path="blogs" element={<PostList />} />
+            <Route path="blogs/new" element={<PostEditorPlaceholder />} />
+            <Route path="blogs/:id/edit" element={<PostEditorPlaceholder />} />
+            {/* Unknown authenticated route: back to the dashboard rather than a blank outlet. */}
+            <Route path="*" element={<Navigate to="/admin" replace />} />
           </Route>
         </Route>
       </Routes>

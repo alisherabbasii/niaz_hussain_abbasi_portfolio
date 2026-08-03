@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, CheckCircle2, PenLine, Star, AlertTriangle, ArrowRight } from 'lucide-react';
-import { Container, PageSection, Badge, Skeleton } from '../../components/ui';
+import { Container, Badge, Skeleton } from '../../components/ui';
 import { CategoryBadge } from '../../components/blog';
 import { listPosts } from '../../api/blogService';
 import { formatDate } from '../../features/blog/utils';
@@ -21,7 +21,7 @@ function filterToParams(filter) {
   return params.toString();
 }
 
-/** Overview landing screen for `/admin`: post counts by status plus a short recent-activity list, each linking into the filtered `/admin/posts` view. */
+/** Overview landing screen for `/admin`: post counts by status plus a short recent-activity list, each linking into the filtered `/admin/blogs` view. */
 export default function AdminDashboard() {
   useDocumentTitle('Admin — Dashboard');
 
@@ -60,7 +60,7 @@ export default function AdminDashboard() {
   }, []);
 
   return (
-    <PageSection>
+    <div className="py-8 md:py-10">
       <Container className="max-w-6xl">
         <div className="mb-10">
           <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight mb-2">Dashboard</h1>
@@ -78,7 +78,7 @@ export default function AdminDashboard() {
           {STAT_CARDS.map((card) => (
             <Link
               key={card.key}
-              to={`/admin/posts${filterToParams(card.filter) ? `?${filterToParams(card.filter)}` : ''}`}
+              to={`/admin/blogs${filterToParams(card.filter) ? `?${filterToParams(card.filter)}` : ''}`}
               className="rounded-2xl border border-slate-100 bg-white p-5 hover:border-accent/30 transition-colors"
             >
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-4 ${card.tone}`}>
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-bold text-primary">Recent posts</h2>
             <Link
-              to="/admin/posts"
+              to="/admin/blogs"
               className="inline-flex items-center gap-1.5 text-xs font-bold text-accent-strong hover:underline"
             >
               View all <ArrowRight size={12} aria-hidden="true" />
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
               {recentPosts.map((post) => (
                 <li key={post.id}>
                   <Link
-                    to={`/admin/posts/${post.id}/edit`}
+                    to={`/admin/blogs/${post.id}/edit`}
                     className="flex items-center justify-between gap-4 py-3.5 group"
                   >
                     <div className="min-w-0">
@@ -142,6 +142,6 @@ export default function AdminDashboard() {
           )}
         </div>
       </Container>
-    </PageSection>
+    </div>
   );
 }

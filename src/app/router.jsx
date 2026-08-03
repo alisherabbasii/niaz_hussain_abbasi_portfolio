@@ -20,12 +20,15 @@ const Admin = lazy(() => import('../pages/admin/Admin'));
 const AppRouter = () => (
   <BrowserRouter>
     <Routes>
+      {/* Standalone app: owns its own chrome (login screen, CRM shell) and must
+          never inherit the public Navbar/Footer, so it sits outside SiteLayout
+          entirely rather than as a nested route within it. */}
+      <Route path="admin/*" element={<Admin />} />
       <Route element={<SiteLayout />}>
         <Route index element={<Home />} />
         <Route path="privacy-policy" element={<PrivacyPolicy />} />
         <Route path="blog" element={<BlogIndex />} />
         <Route path="blog/:slug" element={<BlogPost />} />
-        <Route path="admin/*" element={<Admin />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
