@@ -1,7 +1,6 @@
-/** Categories currently in use across `content/blog/*.md`. Not an enum — authors
- * may introduce new categories; this only powers a select/suggestion UI and the
- * `blog:validate` "unknown category" warning, never a hard validation rejection.
- * Keep in sync with `scripts/blog/lib/constants.mjs`. */
+/** Categories currently in use. Not an enum — authors may introduce new
+ * categories; this only powers a select/suggestion UI, never a hard
+ * validation rejection. */
 export const KNOWN_BLOG_CATEGORIES = ['Survey Engineering', 'Document Control', 'Site Safety', 'Leadership'];
 
 export const DEFAULT_WORDS_PER_MINUTE = 200;

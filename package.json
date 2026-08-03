@@ -9,13 +9,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "blog:new": "node scripts/blog/new.mjs",
-    "blog:validate": "node scripts/blog/validate.mjs",
-    "blog:list": "node scripts/blog/list.mjs"
+    "test": "vitest run"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.4",
+    "axios": "^1.19.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5",

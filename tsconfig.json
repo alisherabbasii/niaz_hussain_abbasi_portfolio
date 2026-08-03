@@ -17,6 +17,7 @@
   "include": [
     "src/features/blog/**/*.ts",
     "src/features/admin/**/*.ts",
-    "src/components/blog/**/*.tsx"
+    "src/components/blog/**/*.tsx",
+    "src/api/**/*.ts"
   ]
 }
