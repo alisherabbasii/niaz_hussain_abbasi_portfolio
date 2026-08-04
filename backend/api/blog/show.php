@@ -49,6 +49,8 @@ try {
         json_response(404, ['error' => 'Blog post not found']);
     }
 
+    blog_backfill_published_at($pdo, $row);
+
     $tags = blog_fetch_tags($pdo, (int) $row['id']);
 
     json_response(200, ['data' => blog_format_post($row, $tags)]);

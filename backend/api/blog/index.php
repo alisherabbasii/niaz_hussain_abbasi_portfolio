@@ -113,7 +113,10 @@ try {
     $rows = $listStmt->fetchAll();
 
     $data = array_map(
-        static fn (array $row): array => blog_format_post($row, blog_fetch_tags($pdo, (int) $row['id'])),
+        static function (array $row) use ($pdo): array {
+            blog_backfill_published_at($pdo, $row);
+            return blog_format_post($row, blog_fetch_tags($pdo, (int) $row['id']));
+        },
         $rows
     );
 

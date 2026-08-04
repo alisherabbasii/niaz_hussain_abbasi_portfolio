@@ -97,6 +97,20 @@ function env_load(?string $path = null): void
 }
 
 /**
+ * The application's single source of truth for "what time is it right now,"
+ * used consistently for publish scheduling (blog_compute_publish_state,
+ * blog_is_visible_to_public) and for MySQL's own CURRENT_TIMESTAMP defaults
+ * (see db_connect() in config/database.php, which points the MySQL session
+ * at the same offset). Override via APP_TIMEZONE in .env; defaults to
+ * Asia/Karachi (this site's production timezone — Pakistan Standard Time,
+ * fixed UTC+5, no DST) if unset. See docs/BLOG-DATE-AND-PUBLISHING-RULES.md.
+ */
+function app_timezone(): string
+{
+    return env_get('APP_TIMEZONE', 'Asia/Karachi') ?? 'Asia/Karachi';
+}
+
+/**
  * Read an environment variable with an optional default and required flag.
  *
  * @throws RuntimeException if $required is true and the variable is unset or empty.
@@ -116,3 +130,13 @@ function env_get(string $key, ?string $default = null, bool $required = false): 
 
     return $value;
 }
+
+// Applied the moment this file is included (every endpoint requires it,
+// directly or via helpers/Session.php / config/database.php), so every
+// date()/time()/strtotime() call in the request — and every comparison
+// against a stored publish_at/published_at — uses the same explicit
+// timezone instead of whatever PHP's ini default happens to be on a given
+// host (commonly UTC, which does not match this site's audience or the
+// admin's own wall-clock expectations). Idempotent: env_load() underneath
+// this is itself guarded, so re-including this file is a no-op.
+date_default_timezone_set(app_timezone());

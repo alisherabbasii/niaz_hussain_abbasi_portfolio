@@ -325,6 +325,45 @@ function blog_compute_publish_state(
     ];
 }
 
+/**
+ * Catch up published_at for a post whose scheduled publish_at has arrived
+ * but which hasn't been written to since (blog_compute_publish_state only
+ * ever runs on a create/update call, so a scheduled post nobody edits again
+ * after it goes live would otherwise leave published_at null forever).
+ * Mutates $row in place so the caller's response reflects the backfilled
+ * value immediately, without requiring a second read.
+ *
+ * Deliberately does not touch updated_at: this is the system catching up a
+ * value that should already be true, not an admin edit (see
+ * docs/BLOG-DATE-AND-PUBLISHING-RULES.md's date rules) — the `updated_at =
+ * updated_at` self-assignment suppresses MySQL's ON UPDATE CURRENT_TIMESTAMP
+ * for this statement, which would otherwise fire because *some* column in
+ * the row changed.
+ *
+ * Call on every row read from blog_select_base() (index.php, show.php) so
+ * a scheduled post becomes fully "published_at is set" the moment any
+ * caller (admin or public) reads it after its publish_at passes — no cron
+ * needed.
+ */
+function blog_backfill_published_at(PDO $pdo, array &$row): void
+{
+    if ($row['status'] !== 'published' || $row['published_at'] !== null || $row['publish_at'] === null) {
+        return;
+    }
+
+    if ($row['publish_at'] > date('Y-m-d H:i:s')) {
+        return;
+    }
+
+    $stmt = $pdo->prepare(
+        'UPDATE blog_posts SET published_at = :published_at, updated_at = updated_at
+         WHERE id = :id AND published_at IS NULL'
+    );
+    $stmt->execute(['published_at' => $row['publish_at'], 'id' => $row['id']]);
+
+    $row['published_at'] = $row['publish_at'];
+}
+
 /** True if $value is a plausible already-uploaded path (see backend/helpers/Upload.php's public_url shape). */
 function blog_is_valid_cover_image_path(string $value): bool
 {

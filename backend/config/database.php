@@ -39,5 +39,19 @@ function db_connect(): PDO
         PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES {$charset} COLLATE {$charset}_unicode_ci",
     ];
 
-    return new PDO($dsn, $user, $pass, $options);
+    $pdo = new PDO($dsn, $user, $pass, $options);
+
+    // Point MySQL's own CURRENT_TIMESTAMP (created_at/updated_at defaults —
+    // see schema.sql) at the same wall-clock offset PHP uses for
+    // publish_at/published_at (config/env.php's date_default_timezone_set),
+    // computed fresh per connection so it stays correct even if
+    // APP_TIMEZONE is ever changed to a zone that observes DST. Without
+    // this, created_at/updated_at would silently drift from
+    // publish_at/published_at whenever the DB server's own default timezone
+    // (frequently UTC on managed hosting) differs from the app's. See
+    // docs/BLOG-DATE-AND-PUBLISHING-RULES.md.
+    $offset = (new DateTime('now', new DateTimeZone(app_timezone())))->format('P');
+    $pdo->exec("SET time_zone = '{$offset}'");
+
+    return $pdo;
 }
