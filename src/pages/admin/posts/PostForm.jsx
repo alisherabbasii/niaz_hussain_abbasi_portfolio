@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -99,8 +99,18 @@ export default function PostForm() {
   useDocumentTitle(isEdit ? 'Admin — Edit Post' : 'Admin — New Post');
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { admin } = useAuth();
   const authorsSelectable = isSuperAdmin(admin);
+
+  // PostList links here with `?returnTo=<its own query string>` so leaving
+  // the form (Back, Cancel, or a successful save) lands back on the exact
+  // same filtered/sorted/paginated list view instead of always resetting to
+  // the unfiltered default.
+  const returnTo = useMemo(() => {
+    const raw = new URLSearchParams(location.search).get('returnTo');
+    return raw ? `/admin/blogs?${raw}` : '/admin/blogs';
+  }, [location.search]);
 
   const titleId = useId();
   const slugId = useId();
@@ -303,10 +313,10 @@ export default function PostForm() {
   useEffect(() => {
     if (!success) return undefined;
     const timeout = setTimeout(() => {
-      navigate('/admin/blogs', { replace: true });
+      navigate(returnTo, { replace: true });
     }, 700);
     return () => clearTimeout(timeout);
-  }, [success, navigate]);
+  }, [success, navigate, returnTo]);
 
   // Mirrored into refs so the unmount-only cleanup effect below always reads
   // the latest value without re-running (and re-registering its cleanup) on
@@ -548,7 +558,7 @@ export default function PostForm() {
         <Container className="max-w-lg">
           <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center">
             <p className="text-slate-500 mb-6">This post no longer exists.</p>
-            <Button to="/admin/blogs" variant="outline" icon={ArrowLeft} iconPosition="leading">
+            <Button to={returnTo} variant="outline" icon={ArrowLeft} iconPosition="leading">
               Back to blogs
             </Button>
           </div>
@@ -562,7 +572,7 @@ export default function PostForm() {
       <Container className="max-w-3xl">
         <div className="mb-8">
           <Button
-            to="/admin/blogs"
+            to={returnTo}
             variant="ghost"
             size="sm"
             icon={ArrowLeft}
@@ -888,7 +898,7 @@ export default function PostForm() {
                 disabled={submitting}
                 onClick={() => {
                   if (dirty && !window.confirm(UNSAVED_CHANGES_MESSAGE)) return;
-                  navigate('/admin/blogs');
+                  navigate(returnTo);
                 }}
               >
                 Cancel

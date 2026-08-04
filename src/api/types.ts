@@ -74,6 +74,7 @@ export interface BlogPost {
   cover_image: string | null;
   cover_image_alt: string | null;
   author: string | null;
+  author_id: number;
   category: string | null;
   tags: string[];
   featured: boolean;
@@ -97,6 +98,8 @@ export interface ListBlogPostsParams {
   featured?: boolean;
   /** Only honored for an authenticated admin; anonymous callers always get published-only results. */
   draft?: boolean;
+  /** Sorts by updated_at; omit for the default order (published-then-created, newest first). */
+  sort?: 'updated_desc' | 'updated_asc';
 }
 
 export interface ListBlogPostsResult {

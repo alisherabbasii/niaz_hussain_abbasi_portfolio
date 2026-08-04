@@ -20,6 +20,9 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
  *   featured   "1"/"0"/"true"/"false"
  *   draft      "1"/"0"/"true"/"false" — only honored for an authenticated
  *              admin; anonymous callers always get published-only results.
+ *   sort       "updated_desc" | "updated_asc" — sorts by bp.updated_at.
+ *              Any other/absent value keeps the default order (published_at
+ *              then created_at, newest first).
  *
  * Anonymous callers never see draft posts. An authenticated admin sees every
  * status unless `draft` narrows it.
@@ -91,6 +94,14 @@ try {
 
     $whereSql = $conditions !== [] ? ('WHERE ' . implode(' AND ', $conditions)) : '';
 
+    // Whitelisted, not built from raw input — $_GET['sort'] only ever
+    // selects one of these two literal ORDER BY clauses.
+    $orderBy = match ($_GET['sort'] ?? null) {
+        'updated_desc' => 'bp.updated_at DESC',
+        'updated_asc' => 'bp.updated_at ASC',
+        default => 'bp.published_at DESC, bp.created_at DESC',
+    };
+
     $countSql = "SELECT COUNT(DISTINCT bp.id) AS total
                  FROM blog_posts bp
                  LEFT JOIN categories c ON c.id = bp.category_id
@@ -101,7 +112,7 @@ try {
     $total = (int) $countStmt->fetch()['total'];
 
     $listSql = blog_select_base() . " {$tagJoin} {$whereSql}
-                ORDER BY bp.published_at DESC, bp.created_at DESC
+                ORDER BY {$orderBy}
                 LIMIT :limit OFFSET :offset";
     $listStmt = $pdo->prepare($listSql);
     foreach ($params as $key => $value) {

@@ -408,6 +408,7 @@ function blog_format_post(array $row, array $tags): array
         'cover_image' => $row['cover_image_path'],
         'cover_image_alt' => $row['cover_image_alt'],
         'author' => $row['author_name'],
+        'author_id' => (int) $row['author_id'],
         'category' => $row['category_name'],
         'tags' => $tags,
         'featured' => (bool) $row['featured'],

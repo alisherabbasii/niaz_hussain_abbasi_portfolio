@@ -37,3 +37,16 @@ export function canAssignRole(admin, role) {
   if (role === ROLES.SUPER_ADMIN) return isSuperAdmin(admin);
   return true;
 }
+
+/**
+ * Blog CRUD role rule (mirrors `backend/helpers/Permissions.php::permission_can_manage_post`):
+ * 'super_admin' and 'admin' may act on any post; 'editor' may only act on
+ * posts they authored themselves.
+ */
+export function canManagePost(admin, post) {
+  if (!admin) return false;
+  if (admin.role === ROLES.EDITOR) {
+    return post?.author_id === admin.id;
+  }
+  return true;
+}

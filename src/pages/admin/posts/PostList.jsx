@@ -9,15 +9,24 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ChevronsUpDown,
+  ArrowUp,
+  ArrowDown,
   AlertTriangle,
   CheckCircle2,
   Star,
+  StarOff,
+  Send,
+  Undo2,
 } from 'lucide-react';
 import { Container, Button, Badge, Input, Skeleton } from '../../../components/ui';
 import { CategoryBadge, BlogEmptyState } from '../../../components/blog';
-import { listPosts, createPost, deletePost } from '../../../api/blogService';
+import { listPosts, createPost, updatePost, deletePost } from '../../../api/blogService';
+import { listCategories } from '../../../api/categoryService';
 import { formatDate } from '../../../features/blog/utils';
 import { isHttpError } from '../../../api/httpError';
+import { useAuth } from '../../../features/admin/useAuth';
+import { canManagePost } from '../../../features/admin/permissions';
 import { useDocumentTitle } from '../../../utils/useDocumentTitle';
 import { cn } from '../../../utils/cn';
 import PostPreviewModal from './PostPreviewModal';
@@ -49,7 +58,7 @@ const RowActionButton = ({ label, icon: Icon, onClick, to, danger, disabled }) =
     danger ? 'text-rose-600 hover:bg-danger/10' : 'text-slate-500 hover:bg-slate-100 hover:text-primary'
   );
 
-  if (to) {
+  if (to && !disabled) {
     return (
       <Link to={to} className={classes} aria-label={label} title={label}>
         <Icon size={15} aria-hidden="true" />
@@ -96,17 +105,20 @@ async function duplicatePost(post) {
 }
 
 /**
- * Post list: search + status/featured filters + pagination, all mirrored
- * into the URL (same pattern as `pages/blog/BlogIndex.jsx`) so a refresh
- * reproduces the exact same view. Actions call the real blog API directly —
- * no local/mock state.
+ * Post list: search + status/category/featured filters + sort-by-updated +
+ * pagination, all mirrored into the URL (same pattern as
+ * `pages/blog/BlogIndex.jsx`) so a refresh reproduces the exact same view.
+ * Actions call the real blog API directly — no local/mock state.
  */
 export default function PostList() {
   useDocumentTitle('Admin — Posts');
 
+  const { admin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const status = searchParams.get('status') ?? '';
+  const category = searchParams.get('category') ?? '';
   const featuredOnly = searchParams.get('featured') === '1';
+  const sort = searchParams.get('sort') ?? '';
   const query = searchParams.get('q') ?? '';
   const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1);
 
@@ -125,10 +137,20 @@ export default function PostList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [banner, setBanner] = useState(null);
+  const [categoryOptions, setCategoryOptions] = useState([]);
 
   const [previewPost, setPreviewPost] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [busyId, setBusyId] = useState(null);
+
+  // Round-trips through the edit/create routes as `?returnTo=…` so navigating
+  // back lands on the exact same filtered/sorted/paginated view — practical
+  // because it survives a full page reload, unlike router location state.
+  const returnTo = searchParams.toString();
+  const withReturnTo = useCallback(
+    (path) => (returnTo ? `${path}?returnTo=${encodeURIComponent(returnTo)}` : path),
+    [returnTo]
+  );
 
   const updateParams = useCallback(
     (patch, { resetPage = true } = {}) => {
@@ -157,6 +179,20 @@ export default function PostList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
+  // Best-effort — the category filter stays usable (free-text via URL) even
+  // if this fails to load; only the dropdown's option list is affected.
+  useEffect(() => {
+    let cancelled = false;
+    listCategories()
+      .then((data) => {
+        if (!cancelled) setCategoryOptions(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const fetchPosts = useCallback(() => {
     let cancelled = false;
 
@@ -172,7 +208,9 @@ export default function PostList() {
           per_page: PER_PAGE,
           search: query || undefined,
           draft: status === 'draft' ? true : status === 'published' ? false : undefined,
+          category: category || undefined,
           featured: featuredOnly ? true : undefined,
+          sort: sort === 'updated_asc' || sort === 'updated_desc' ? sort : undefined,
         });
       })
       .then((result) => {
@@ -191,7 +229,7 @@ export default function PostList() {
     return () => {
       cancelled = true;
     };
-  }, [page, query, status, featuredOnly]);
+  }, [page, query, status, category, featuredOnly, sort]);
 
   useEffect(() => fetchPosts(), [fetchPosts]);
 
@@ -203,22 +241,43 @@ export default function PostList() {
 
   const totalPages = pagination?.total_pages ?? 0;
   const total = pagination?.total ?? 0;
-  const hasActiveFilters = Boolean(query || status || featuredOnly);
+  const hasActiveFilters = Boolean(query || status || category || featuredOnly);
 
   const goToPage = (nextPage) => updateParams({ page: String(nextPage) }, { resetPage: false });
 
-  const handleDuplicate = async (post) => {
+  const toggleSort = () => {
+    const next = sort === 'updated_desc' ? 'updated_asc' : sort === 'updated_asc' ? '' : 'updated_desc';
+    updateParams({ sort: next });
+  };
+
+  const runAction = async (post, message, action) => {
     setBusyId(post.id);
     try {
-      await duplicatePost(post);
-      setBanner({ type: 'success', message: `Duplicated "${post.title}".` });
+      await action();
+      setBanner({ type: 'success', message });
       fetchPosts();
-    } catch {
-      setBanner({ type: 'error', message: `Could not duplicate "${post.title}".` });
+    } catch (err) {
+      setBanner({
+        type: 'error',
+        message: isHttpError(err) ? err.message : `Could not update "${post.title}".`,
+      });
     } finally {
       setBusyId(null);
     }
   };
+
+  const handleTogglePublish = (post) =>
+    runAction(post, `"${post.title}" is now ${post.draft ? 'published' : 'a draft'}.`, () =>
+      updatePost(post.id, { draft: !post.draft })
+    );
+
+  const handleToggleFeatured = (post) =>
+    runAction(post, `"${post.title}" is now ${post.featured ? 'unfeatured' : 'featured'}.`, () =>
+      updatePost(post.id, { featured: !post.featured })
+    );
+
+  const handleDuplicate = (post) =>
+    runAction(post, `Duplicated "${post.title}".`, () => duplicatePost(post));
 
   const handleDeleteConfirm = async () => {
     if (!pendingDelete) return;
@@ -233,8 +292,11 @@ export default function PostList() {
       } else {
         fetchPosts();
       }
-    } catch {
-      setBanner({ type: 'error', message: `Could not delete "${target.title}".` });
+    } catch (err) {
+      setBanner({
+        type: 'error',
+        message: isHttpError(err) ? err.message : `Could not delete "${target.title}".`,
+      });
       setPendingDelete(null);
     } finally {
       setBusyId(null);
@@ -249,7 +311,7 @@ export default function PostList() {
             <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight mb-2">Blogs</h1>
             <p className="text-slate-500 font-light">Search, filter, and manage every post.</p>
           </div>
-          <Button to="/admin/blogs/new" icon={Plus} iconPosition="leading">
+          <Button to={withReturnTo('/admin/blogs/new')} icon={Plus} iconPosition="leading">
             Create post
           </Button>
         </div>
@@ -306,6 +368,38 @@ export default function PostList() {
               <Star size={11} aria-hidden="true" />
               Featured
             </button>
+            <label className="sr-only" htmlFor="post-category-filter">
+              Filter by category
+            </label>
+            <select
+              id="post-category-filter"
+              className="field-input !w-auto !py-1.5 !text-xs !font-bold"
+              value={category}
+              onChange={(e) => updateParams({ category: e.target.value })}
+            >
+              <option value="">All categories</option>
+              {categoryOptions.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={toggleSort}
+              aria-pressed={Boolean(sort)}
+              className={cn(pillClasses(Boolean(sort)), 'inline-flex items-center gap-1.5')}
+              title="Sort by updated date"
+            >
+              {sort === 'updated_asc' ? (
+                <ArrowUp size={11} aria-hidden="true" />
+              ) : sort === 'updated_desc' ? (
+                <ArrowDown size={11} aria-hidden="true" />
+              ) : (
+                <ChevronsUpDown size={11} aria-hidden="true" />
+              )}
+              {sort === 'updated_asc' ? 'Oldest updated' : sort === 'updated_desc' ? 'Newest updated' : 'Sort: Updated'}
+            </button>
           </div>
         </div>
 
@@ -343,58 +437,117 @@ export default function PostList() {
                   <th className="px-5 py-3">Title</th>
                   <th className="px-5 py-3 hidden md:table-cell">Category</th>
                   <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Featured</th>
                   <th className="px-5 py-3 hidden lg:table-cell">Author</th>
-                  <th className="px-5 py-3 hidden lg:table-cell">Date</th>
+                  <th className="px-5 py-3 hidden lg:table-cell">Publish date</th>
+                  <th className="px-5 py-3 hidden xl:table-cell">
+                    <button
+                      type="button"
+                      onClick={toggleSort}
+                      className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+                    >
+                      Updated
+                      {sort === 'updated_asc' ? (
+                        <ArrowUp size={12} aria-hidden="true" />
+                      ) : sort === 'updated_desc' ? (
+                        <ArrowDown size={12} aria-hidden="true" />
+                      ) : (
+                        <ChevronsUpDown size={12} className="opacity-40" aria-hidden="true" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {posts.map((post) => (
-                  <tr key={post.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-5 py-4 max-w-xs">
-                      <p className="font-bold text-primary line-clamp-1">{post.title}</p>
-                      <p className="text-xs text-slate-400 font-mono">/{post.slug}</p>
-                    </td>
-                    <td className="px-5 py-4 hidden md:table-cell">
-                      <CategoryBadge category={post.category} />
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex flex-wrap items-center gap-1.5">
+                {posts.map((post) => {
+                  const canManage = canManagePost(admin, post);
+                  return (
+                    <tr key={post.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-5 py-4 max-w-xs">
+                        <p className="font-bold text-primary line-clamp-1">{post.title}</p>
+                        <p className="text-xs text-slate-400 font-mono">/{post.slug}</p>
+                        <div className="md:hidden mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
+                          {post.category && <span>{post.category}</span>}
+                          {post.author && <span>{post.category ? '· ' : ''}{post.author}</span>}
+                          {post.publish_date && <span>· {formatDate(post.publish_date)}</span>}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 hidden md:table-cell">
+                        <CategoryBadge category={post.category} />
+                      </td>
+                      <td className="px-5 py-4">
                         <Badge variant={post.draft ? 'warning' : 'success'} size="sm">
                           {post.draft ? 'Draft' : 'Published'}
                         </Badge>
-                        {post.featured && (
+                      </td>
+                      <td className="px-5 py-4">
+                        {post.featured ? (
                           <Badge variant="accent" size="sm" icon={Star}>
                             Featured
                           </Badge>
+                        ) : (
+                          <span className="text-slate-300">—</span>
                         )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 hidden lg:table-cell text-slate-500">{post.author ?? '—'}</td>
-                    <td className="px-5 py-4 hidden lg:table-cell text-slate-500">
-                      {post.publish_date ? formatDate(post.publish_date) : '—'}
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <RowActionButton label="Preview" icon={Eye} onClick={() => setPreviewPost(post)} />
-                        <RowActionButton label="Edit" icon={Pencil} to={`/admin/blogs/${post.id}/edit`} />
-                        <RowActionButton
-                          label="Duplicate"
-                          icon={Copy}
-                          onClick={() => handleDuplicate(post)}
-                          disabled={busyId === post.id}
-                        />
-                        <RowActionButton
-                          label="Delete"
-                          icon={Trash2}
-                          danger
-                          onClick={() => setPendingDelete(post)}
-                          disabled={busyId === post.id}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-5 py-4 hidden lg:table-cell text-slate-500">{post.author ?? '—'}</td>
+                      <td className="px-5 py-4 hidden lg:table-cell text-slate-500">
+                        {post.publish_date ? formatDate(post.publish_date) : '—'}
+                      </td>
+                      <td className="px-5 py-4 hidden xl:table-cell text-slate-500">
+                        {post.updated_at ? formatDate(post.updated_at) : '—'}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          <RowActionButton label="Preview" icon={Eye} onClick={() => setPreviewPost(post)} />
+                          <RowActionButton
+                            label={canManage ? 'Edit' : "You don't have permission to edit this post"}
+                            icon={Pencil}
+                            to={withReturnTo(`/admin/blogs/${post.id}/edit`)}
+                            disabled={!canManage}
+                          />
+                          <RowActionButton
+                            label={
+                              !canManage
+                                ? "You don't have permission to change this post's status"
+                                : post.draft
+                                  ? 'Publish'
+                                  : 'Unpublish'
+                            }
+                            icon={post.draft ? Send : Undo2}
+                            onClick={() => handleTogglePublish(post)}
+                            disabled={!canManage || busyId === post.id}
+                          />
+                          <RowActionButton
+                            label={
+                              !canManage
+                                ? "You don't have permission to feature this post"
+                                : post.featured
+                                  ? 'Unfeature'
+                                  : 'Feature'
+                            }
+                            icon={post.featured ? StarOff : Star}
+                            onClick={() => handleToggleFeatured(post)}
+                            disabled={!canManage || busyId === post.id}
+                          />
+                          <RowActionButton
+                            label="Duplicate"
+                            icon={Copy}
+                            onClick={() => handleDuplicate(post)}
+                            disabled={busyId === post.id}
+                          />
+                          <RowActionButton
+                            label={canManage ? 'Delete' : "You don't have permission to delete this post"}
+                            icon={Trash2}
+                            danger
+                            onClick={() => setPendingDelete(post)}
+                            disabled={!canManage || busyId === post.id}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
