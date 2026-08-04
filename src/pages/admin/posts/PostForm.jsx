@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   FilePlus2,
   Save,
+  Trash2,
   Upload,
   X,
 } from 'lucide-react';
@@ -14,7 +15,7 @@ import { getPostById, createPost, updatePost } from '../../../api/blogService';
 import { listCategories } from '../../../api/categoryService';
 import { listTags } from '../../../api/tagService';
 import { listUsers } from '../../../api/userService';
-import { uploadCoverImage } from '../../../api/uploadService';
+import { uploadCoverImage, deleteUpload, resolveUploadUrl } from '../../../api/uploadService';
 import { isHttpError } from '../../../api/httpError';
 import { useAuth } from '../../../features/admin/useAuth';
 import { isSuperAdmin, ROLE_LABELS } from '../../../features/admin/permissions';
@@ -22,6 +23,12 @@ import { useDocumentTitle } from '../../../utils/useDocumentTitle';
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const UNSAVED_CHANGES_MESSAGE = 'You have unsaved changes. Leave without saving?';
+
+/** Mirrors the allow-list in `backend/helpers/Upload.php::upload_allowed_types` — frontend check is for usability only, the backend remains authoritative. */
+const COVER_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const COVER_ALLOWED_LABEL = 'JPG, PNG, WEBP, or GIF';
+/** Mirrors `upload_max_bytes()`'s default (8 MiB) — the real cap is server-side and may be overridden there via UPLOAD_MAX_BYTES. */
+const COVER_MAX_BYTES = 8 * 1024 * 1024;
 
 /** Mirrors `backend/helpers/Blog.php::blog_slugify` closely enough for a live preview — the backend remains the source of truth. */
 function slugify(text) {
@@ -138,7 +145,19 @@ export default function PostForm() {
   const [authorOptions, setAuthorOptions] = useState([]);
 
   const [coverUploading, setCoverUploading] = useState(false);
+  const [coverUploadProgress, setCoverUploadProgress] = useState(0);
   const [coverUploadError, setCoverUploadError] = useState('');
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
+  // The `uploads.id` of a cover image uploaded during this form session that
+  // hasn't been attached to a successfully saved post yet. Only files we
+  // know this id for are safe to delete outright (see handleRemoveCover):
+  // they were never referenced by any saved post, so nothing else could be
+  // pointing at them. A pre-existing cover loaded from the post being edited
+  // never gets an id here, and is deliberately never auto-deleted — the
+  // `uploads` table isn't foreign-keyed to blog_posts (see
+  // backend/api/upload/delete.php's comment), so there's no reliable way to
+  // confirm it isn't still referenced elsewhere.
+  const [pendingUploadId, setPendingUploadId] = useState(null);
 
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState('');
@@ -288,6 +307,37 @@ export default function PostForm() {
     return () => clearTimeout(timeout);
   }, [success, navigate]);
 
+  // Mirrored into refs so the unmount-only cleanup effect below always reads
+  // the latest value without re-running (and re-registering its cleanup) on
+  // every change.
+  const pendingUploadIdRef = useRef(null);
+  useEffect(() => {
+    pendingUploadIdRef.current = pendingUploadId;
+  }, [pendingUploadId]);
+  const coverPreviewUrlRef = useRef('');
+  useEffect(() => {
+    coverPreviewUrlRef.current = coverPreviewUrl;
+  }, [coverPreviewUrl]);
+  const successRef = useRef(false);
+  useEffect(() => {
+    successRef.current = Boolean(success);
+  }, [success]);
+
+  // Best-effort cleanup if the form is abandoned (Cancel, back button, nav
+  // away) without ever saving: an in-session upload that never made it onto
+  // a saved post is a guaranteed orphan, safe to delete. If the save
+  // succeeded, pendingUploadId was already cleared, so this is a no-op.
+  useEffect(() => {
+    return () => {
+      if (coverPreviewUrlRef.current) {
+        URL.revokeObjectURL(coverPreviewUrlRef.current);
+      }
+      if (!successRef.current && pendingUploadIdRef.current !== null) {
+        deleteUpload(pendingUploadIdRef.current).catch(() => {});
+      }
+    };
+  }, []);
+
   const handleTitleChange = (e) => {
     const value = e.target.value;
     setTitle(value);
@@ -305,14 +355,64 @@ export default function PostForm() {
     if (!file) return;
 
     setCoverUploadError('');
+
+    // Frontend validation is for usability (fail fast, no round trip) — the
+    // backend re-validates real content (MIME sniffing, dimensions, etc.)
+    // and is the authoritative check either way.
+    if (!COVER_ALLOWED_MIME_TYPES.includes(file.type)) {
+      setCoverUploadError(`Unsupported image type. Allowed formats: ${COVER_ALLOWED_LABEL}.`);
+      return;
+    }
+    if (file.size > COVER_MAX_BYTES) {
+      setCoverUploadError(`File exceeds the maximum allowed size of ${COVER_MAX_BYTES / (1024 * 1024)} MB.`);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setCoverPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return objectUrl;
+    });
     setCoverUploading(true);
+    setCoverUploadProgress(0);
+
+    const previousPendingId = pendingUploadId;
     try {
-      const result = await uploadCoverImage(file);
+      const result = await uploadCoverImage(file, setCoverUploadProgress);
       setCoverImage(result.url);
+      setPendingUploadId(result.id);
+      setFieldErrors((prev) => ({ ...prev, coverImage: undefined, coverImageAlt: undefined }));
+      if (previousPendingId !== null) {
+        // Safe to delete outright: it was uploaded earlier in this same
+        // session and never made it into a saved post, so nothing else can
+        // reference it.
+        deleteUpload(previousPendingId).catch(() => {});
+      }
     } catch (err) {
       setCoverUploadError(isHttpError(err) ? err.message : 'Could not upload image. Please try again.');
     } finally {
+      setCoverPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return '';
+      });
       setCoverUploading(false);
+    }
+  };
+
+  const handleRemoveCover = () => {
+    setCoverPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return '';
+    });
+    setCoverImage('');
+    setCoverImageAlt('');
+    setCoverUploadError('');
+    setFieldErrors((prev) => ({ ...prev, coverImage: undefined, coverImageAlt: undefined }));
+    if (pendingUploadId !== null) {
+      // Same reasoning as the replace path above: only ever delete a file we
+      // know was never attached to a saved post.
+      deleteUpload(pendingUploadId).catch(() => {});
+      setPendingUploadId(null);
     }
   };
 
@@ -362,6 +462,9 @@ export default function PostForm() {
     if (coverImageAlt.length > 300) {
       errors.coverImageAlt = 'Alt text must be at most 300 characters.';
     }
+    if (coverImage.trim() && !coverImageAlt.trim()) {
+      errors.coverImageAlt = 'Alt text is required when a cover image is set.';
+    }
     if (seoTitle.length > 200) {
       errors.seoTitle = 'SEO title must be at most 200 characters.';
     }
@@ -407,6 +510,9 @@ export default function PostForm() {
       }
       setInitialSnapshot(currentSnapshot);
       setFieldErrors({});
+      // The uploaded file (if any) is now attached to a saved post — no
+      // longer an orphan the unmount/replace cleanup should touch.
+      setPendingUploadId(null);
       setSuccess(isEdit ? 'Post updated.' : 'Post created.');
     } catch (err) {
       if (isHttpError(err)) {
@@ -428,6 +534,12 @@ export default function PostForm() {
     if (isEdit) return existingAuthorName || '—';
     return admin?.name ? `You — ${admin.name}` : 'You';
   }, [isEdit, existingAuthorName, admin]);
+
+  // The local blob preview (shown instantly on file select, during upload)
+  // takes priority over the saved/uploaded path so a replace shows the new
+  // image right away instead of the one it's superseding.
+  const hasCoverImage = Boolean(coverPreviewUrl || coverImage);
+  const coverPreviewSrc = coverPreviewUrl || resolveUploadUrl(coverImage);
 
   if (notFound) {
     return (
@@ -530,23 +642,35 @@ export default function PostForm() {
 
             <div className="grid sm:grid-cols-2 gap-5">
               <div>
-                <Input
+                <label htmlFor={coverImageId} className="field-label">Cover image</label>
+                <div className="relative w-full aspect-video rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+                  {coverPreviewSrc ? (
+                    <img src={coverPreviewSrc} alt={coverImageAlt} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs text-slate-400">No cover image</span>
+                  )}
+                  {coverUploading && (
+                    <div className="absolute inset-0 bg-slate-900/55 flex flex-col items-center justify-center gap-2 px-6 text-white">
+                      <span className="text-xs font-semibold">Uploading… {coverUploadProgress}%</span>
+                      <div className="w-full max-w-[10rem] h-1.5 rounded-full bg-white/30 overflow-hidden">
+                        <div
+                          className="h-full bg-white transition-all duration-150"
+                          style={{ width: `${coverUploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <input
+                  ref={fileInputRef}
                   id={coverImageId}
-                  label="Cover image path"
-                  value={coverImage}
-                  onChange={(e) => setCoverImage(e.target.value)}
-                  error={fieldErrors.coverImage}
-                  disabled={submitting}
-                  placeholder="/uploads/blog/covers/…"
+                  type="file"
+                  accept={COVER_ALLOWED_MIME_TYPES.join(',')}
+                  className="hidden"
+                  onChange={handleCoverFileChange}
                 />
-                <div className="mt-2 flex items-center gap-3">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleCoverFileChange}
-                  />
+                <div className="mt-2 flex items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -556,32 +680,38 @@ export default function PostForm() {
                     disabled={submitting || coverUploading}
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    {coverUploading ? 'Uploading…' : 'Upload image'}
+                    {coverUploading ? 'Uploading…' : hasCoverImage ? 'Replace image' : 'Upload image'}
                   </Button>
-                </div>
-                {coverUploadError && <p className="field-error" role="alert">{coverUploadError}</p>}
-              </div>
-
-              <div>
-                <span className="field-label">Preview</span>
-                <div className="w-full aspect-video rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
-                  {coverImage ? (
-                    <img src={coverImage} alt={coverImageAlt} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-xs text-slate-400">No cover image</span>
+                  {hasCoverImage && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      icon={Trash2}
+                      iconPosition="leading"
+                      disabled={submitting || coverUploading}
+                      onClick={handleRemoveCover}
+                    >
+                      Remove
+                    </Button>
                   )}
                 </div>
+                <p className="field-hint">{COVER_ALLOWED_LABEL}, up to {COVER_MAX_BYTES / (1024 * 1024)} MB.</p>
+                {coverUploadError && <p className="field-error" role="alert">{coverUploadError}</p>}
+                {fieldErrors.coverImage && <p className="field-error" role="alert">{fieldErrors.coverImage}</p>}
               </div>
-            </div>
 
-            <Input
-              id={coverImageAltId}
-              label="Cover image alt text"
-              value={coverImageAlt}
-              onChange={(e) => setCoverImageAlt(e.target.value)}
-              error={fieldErrors.coverImageAlt}
-              disabled={submitting}
-            />
+              <Input
+                id={coverImageAltId}
+                label={hasCoverImage ? 'Cover image alt text (required)' : 'Cover image alt text'}
+                value={coverImageAlt}
+                onChange={(e) => setCoverImageAlt(e.target.value)}
+                error={fieldErrors.coverImageAlt}
+                disabled={submitting || !hasCoverImage}
+                required={hasCoverImage}
+                hint={!fieldErrors.coverImageAlt && !hasCoverImage ? 'Upload a cover image to set alt text.' : undefined}
+              />
+            </div>
 
             <div>
               <span className="field-label">Author</span>

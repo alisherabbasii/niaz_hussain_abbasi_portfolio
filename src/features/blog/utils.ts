@@ -160,9 +160,11 @@ export function getRelatedPosts(
  * Adapts a `backend/api/blog/*` response (see `src/api/types.ts`) into the
  * normalized `BlogPost` shape the display components in `components/blog`
  * were built against (field names inherited from the pre-CMS static-content
- * model). The API doesn't serve a cover image yet (`blog_format_post` never
- * selects `cover_image_path`/`cover_image_alt`), so that's always null here
- * until the backend exposes it.
+ * model). `coverImage` is passed through as the root-relative path the
+ * backend returns (e.g. `/uploads/blog/covers/xyz.jpg`) — same-origin in
+ * production, and in local dev resolved via the Vite `/uploads` proxy (see
+ * vite.config.js), matching every other `<img src={post.coverImage}>` usage
+ * in `components/blog`/`pages/blog`.
  */
 export function toDisplayPost(apiPost: ApiBlogPost): BlogPost {
   return {
@@ -175,8 +177,8 @@ export function toDisplayPost(apiPost: ApiBlogPost): BlogPost {
     author: apiPost.author ?? '',
     category: apiPost.category ?? '',
     tags: apiPost.tags,
-    coverImage: null,
-    coverImageAlt: '',
+    coverImage: apiPost.cover_image ?? null,
+    coverImageAlt: apiPost.cover_image_alt ?? '',
     featured: apiPost.featured,
     draft: apiPost.draft,
     keywords: apiPost.tags,

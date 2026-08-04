@@ -43,6 +43,16 @@ const PostPreviewModal = ({ post, onClose }) => {
         )}
       </div>
 
+      {post.cover_image && (
+        <div className="-mx-1 mb-6 aspect-[16/9] overflow-hidden rounded-xl bg-slate-100">
+          <img
+            src={post.cover_image}
+            alt={post.cover_image_alt ?? ''}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
       <MarkdownContent content={post.content} className={ARTICLE_CLASSES} />
 
       {post.tags.length > 0 && <TagList tags={post.tags} className="mt-6" />}

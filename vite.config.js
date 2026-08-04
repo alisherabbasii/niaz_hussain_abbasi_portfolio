@@ -19,6 +19,14 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      // Uploaded files (e.g. blog cover images) are served by the PHP
+      // backend from uploads/ at the site root — same origin in production,
+      // but a different port in local dev, so it needs the same proxy /api
+      // gets above (see backend/config/uploads.php's uploads_public_base()).
+      '/uploads': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
   },
 })
