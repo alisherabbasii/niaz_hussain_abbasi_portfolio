@@ -8,7 +8,7 @@ import AdminLogin from './AdminLogin';
 import AdminLayout from './AdminLayout';
 import AdminDashboard from './AdminDashboard';
 import PostList from './posts/PostList';
-import PostEditorPlaceholder from './posts/PostEditorPlaceholder';
+import PostForm from './posts/PostForm';
 import UsersList from './users/UsersList';
 import UserForm from './users/UserForm';
 import Profile from './Profile';
@@ -38,8 +38,8 @@ export default function Admin() {
           <Route element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="blogs" element={<PostList />} />
-            <Route path="blogs/new" element={<PostEditorPlaceholder />} />
-            <Route path="blogs/:id/edit" element={<PostEditorPlaceholder />} />
+            <Route path="blogs/new" element={<PostForm />} />
+            <Route path="blogs/:id/edit" element={<PostForm />} />
             <Route path="profile" element={<Profile />} />
             <Route path="forbidden" element={<Forbidden />} />
             {/* Reachable by any authenticated admin, but only super_admin passes the

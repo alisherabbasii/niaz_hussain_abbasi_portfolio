@@ -1,0 +1,776 @@
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  FilePlus2,
+  Save,
+  Upload,
+  X,
+} from 'lucide-react';
+import { Container, Button, Input, Textarea, Badge } from '../../../components/ui';
+import { getPostById, createPost, updatePost } from '../../../api/blogService';
+import { listCategories } from '../../../api/categoryService';
+import { listTags } from '../../../api/tagService';
+import { listUsers } from '../../../api/userService';
+import { uploadCoverImage } from '../../../api/uploadService';
+import { isHttpError } from '../../../api/httpError';
+import { useAuth } from '../../../features/admin/useAuth';
+import { isSuperAdmin, ROLE_LABELS } from '../../../features/admin/permissions';
+import { useDocumentTitle } from '../../../utils/useDocumentTitle';
+
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const UNSAVED_CHANGES_MESSAGE = 'You have unsaved changes. Leave without saving?';
+
+/** Mirrors `backend/helpers/Blog.php::blog_slugify` closely enough for a live preview — the backend remains the source of truth. */
+function slugify(text) {
+  const ascii = text.normalize('NFKD').replace(/[̀-ͯ]/g, '');
+  return ascii
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** "2026-08-10 14:30:00" (MySQL DATETIME) -> "2026-08-10T14:30" (<input type="datetime-local">). */
+function toDatetimeLocalValue(value) {
+  if (!value) return '';
+  return value.replace(' ', 'T').slice(0, 16);
+}
+
+/**
+ * The backend returns a single `{ error: string }` message rather than
+ * per-field errors, so this maps well-known validation-message prefixes back
+ * onto the form field they describe. Falls back to a form-level banner when
+ * a message doesn't match any known field.
+ */
+function mapErrorToField(message) {
+  const rules = [
+    [/^title/i, 'title'],
+    [/^slug/i, 'slug'],
+    [/^content/i, 'content'],
+    [/^excerpt/i, 'excerpt'],
+    [/^cover_image_alt/i, 'coverImageAlt'],
+    [/^cover_image/i, 'coverImage'],
+    [/^seo_title/i, 'seoTitle'],
+    [/^seo_description/i, 'seoDescription'],
+    [/^status/i, 'draft'],
+    [/^tags/i, 'tags'],
+    [/publish_at/i, 'publishAt'],
+    [/author/i, 'author'],
+    [/category/i, 'category'],
+  ];
+  const match = rules.find(([pattern]) => pattern.test(message));
+  return match?.[1] ?? null;
+}
+
+function defaultSnapshot() {
+  return {
+    title: '',
+    slug: '',
+    excerpt: '',
+    content: '',
+    coverImage: '',
+    coverImageAlt: '',
+    category: '',
+    tags: [],
+    draft: true,
+    featured: false,
+    seoTitle: '',
+    seoDescription: '',
+    publishAt: '',
+    authorId: '',
+  };
+}
+
+/** Shared create/edit form for `/admin/blogs/new` and `/admin/blogs/:id/edit`. Plain-textarea content for now — TipTap lands in a follow-up pass. */
+export default function PostForm() {
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+  useDocumentTitle(isEdit ? 'Admin — Edit Post' : 'Admin — New Post');
+
+  const navigate = useNavigate();
+  const { admin } = useAuth();
+  const authorsSelectable = isSuperAdmin(admin);
+
+  const titleId = useId();
+  const slugId = useId();
+  const excerptId = useId();
+  const contentId = useId();
+  const coverImageId = useId();
+  const coverImageAltId = useId();
+  const categoryId = useId();
+  const tagsId = useId();
+  const draftId = useId();
+  const seoTitleId = useId();
+  const seoDescriptionId = useId();
+  const publishAtId = useId();
+  const authorSelectId = useId();
+  const categoryListId = useId();
+  const tagListId = useId();
+
+  const [loading, setLoading] = useState(isEdit);
+  const [loadError, setLoadError] = useState('');
+  const [notFound, setNotFound] = useState(false);
+  const [existingAuthorName, setExistingAuthorName] = useState('');
+
+  const [title, setTitle] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [excerpt, setExcerpt] = useState('');
+  const [content, setContent] = useState('');
+  const [coverImage, setCoverImage] = useState('');
+  const [coverImageAlt, setCoverImageAlt] = useState('');
+  const [category, setCategory] = useState('');
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
+  const [draft, setDraft] = useState(true);
+  const [featured, setFeatured] = useState(false);
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [publishAt, setPublishAt] = useState('');
+  const [authorId, setAuthorId] = useState('');
+  const [authorTouched, setAuthorTouched] = useState(false);
+
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [tagOptions, setTagOptions] = useState([]);
+  const [authorOptions, setAuthorOptions] = useState([]);
+
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverUploadError, setCoverUploadError] = useState('');
+
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formError, setFormError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const fileInputRef = useRef(null);
+  const [initialSnapshot, setInitialSnapshot] = useState(() => (isEdit ? null : JSON.stringify(defaultSnapshot())));
+
+  // Categories/tags are best-effort background loads — the form stays fully
+  // usable (both accept free text) if either fails to load.
+  useEffect(() => {
+    let cancelled = false;
+    listCategories()
+      .then((data) => {
+        if (!cancelled) setCategoryOptions(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    listTags()
+      .then((data) => {
+        if (!cancelled) setTagOptions(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Choosing an arbitrary author requires listing every admin, which
+  // `GET /api/users/index.php` only allows for a super_admin (see
+  // `backend/helpers/Permissions.php::permission_require_manage_users`) — for
+  // anyone else the field stays a read-only display of the current/default author.
+  useEffect(() => {
+    if (!authorsSelectable) return undefined;
+    let cancelled = false;
+    listUsers({ per_page: 50, status: 'active' })
+      .then((result) => {
+        if (!cancelled) setAuthorOptions(Array.isArray(result?.data) ? result.data : []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [authorsSelectable]);
+
+  useEffect(() => {
+    if (!isEdit) return undefined;
+
+    let cancelled = false;
+    Promise.resolve()
+      .then(() => {
+        setLoading(true);
+        return getPostById(Number(id));
+      })
+      .then((post) => {
+        if (cancelled) return;
+        setTitle(post.title);
+        setSlug(post.slug);
+        setSlugTouched(true); // editing an existing, already-published slug shouldn't silently rewrite on title edits
+        setExcerpt(post.excerpt ?? '');
+        setContent(post.content ?? '');
+        setCoverImage(post.cover_image ?? '');
+        setCoverImageAlt(post.cover_image_alt ?? '');
+        setCategory(post.category ?? '');
+        setTags(post.tags ?? []);
+        setDraft(post.draft);
+        setFeatured(post.featured);
+        setSeoTitle(post.seo_title ?? '');
+        setSeoDescription(post.seo_description ?? '');
+        setPublishAt(toDatetimeLocalValue(post.publish_at));
+        setExistingAuthorName(post.author ?? '');
+
+        setInitialSnapshot(JSON.stringify({
+          ...defaultSnapshot(),
+          title: post.title,
+          slug: post.slug,
+          excerpt: post.excerpt ?? '',
+          content: post.content ?? '',
+          coverImage: post.cover_image ?? '',
+          coverImageAlt: post.cover_image_alt ?? '',
+          category: post.category ?? '',
+          tags: post.tags ?? [],
+          draft: post.draft,
+          featured: post.featured,
+          seoTitle: post.seo_title ?? '',
+          seoDescription: post.seo_description ?? '',
+          publishAt: toDatetimeLocalValue(post.publish_at),
+        }));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (isHttpError(err) && err.status === 404) {
+          setNotFound(true);
+        } else {
+          setLoadError("Couldn't load this post. Please try again.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, isEdit]);
+
+  const currentSnapshot = JSON.stringify({
+    title,
+    slug,
+    excerpt,
+    content,
+    coverImage,
+    coverImageAlt,
+    category,
+    tags,
+    draft,
+    featured,
+    seoTitle,
+    seoDescription,
+    publishAt,
+    authorId,
+  });
+  const dirty = initialSnapshot !== null && initialSnapshot !== currentSnapshot;
+
+  useEffect(() => {
+    if (!dirty || submitting) return undefined;
+    const handler = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty, submitting]);
+
+  useEffect(() => {
+    if (!success) return undefined;
+    const timeout = setTimeout(() => {
+      navigate('/admin/blogs', { replace: true });
+    }, 700);
+    return () => clearTimeout(timeout);
+  }, [success, navigate]);
+
+  const handleTitleChange = (e) => {
+    const value = e.target.value;
+    setTitle(value);
+    if (!slugTouched) setSlug(slugify(value));
+  };
+
+  const handleSlugChange = (e) => {
+    setSlugTouched(true);
+    setSlug(e.target.value);
+  };
+
+  const handleCoverFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setCoverUploadError('');
+    setCoverUploading(true);
+    try {
+      const result = await uploadCoverImage(file);
+      setCoverImage(result.url);
+    } catch (err) {
+      setCoverUploadError(isHttpError(err) ? err.message : 'Could not upload image. Please try again.');
+    } finally {
+      setCoverUploading(false);
+    }
+  };
+
+  const addTag = (raw) => {
+    const value = raw.trim();
+    if (!value) return;
+    setTags((prev) => (prev.some((t) => t.toLowerCase() === value.toLowerCase()) ? prev : [...prev, value]));
+    setTagInput('');
+  };
+
+  const removeTag = (value) => {
+    setTags((prev) => prev.filter((t) => t !== value));
+  };
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(tagInput);
+    } else if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
+      removeTag(tags[tags.length - 1]);
+    }
+  };
+
+  const confirmDiscardIfDirty = (e) => {
+    if (dirty && !window.confirm(UNSAVED_CHANGES_MESSAGE)) {
+      e.preventDefault();
+    }
+  };
+
+  const validate = () => {
+    const errors = {};
+    if (!title.trim() || title.trim().length > 200) {
+      errors.title = 'Title is required and must be at most 200 characters.';
+    }
+    if (!slug.trim() || slug.length > 220 || !SLUG_PATTERN.test(slug)) {
+      errors.slug = 'Slug must be lowercase alphanumeric segments separated by hyphens.';
+    }
+    if (!content.trim()) {
+      errors.content = 'Content is required.';
+    }
+    if (excerpt.length > 400) {
+      errors.excerpt = 'Short description must be at most 400 characters.';
+    }
+    if (coverImage.trim() && (!coverImage.trim().startsWith('/') || coverImage.trim().length > 500)) {
+      errors.coverImage = 'Cover image must be an uploaded file path (starting with "/"), at most 500 characters.';
+    }
+    if (coverImageAlt.length > 300) {
+      errors.coverImageAlt = 'Alt text must be at most 300 characters.';
+    }
+    if (seoTitle.length > 200) {
+      errors.seoTitle = 'SEO title must be at most 200 characters.';
+    }
+    if (seoDescription.length > 400) {
+      errors.seoDescription = 'SEO description must be at most 400 characters.';
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    setFormError('');
+    if (!validate()) return;
+
+    const payload = {
+      title: title.trim(),
+      content,
+      slug: slug.trim(),
+      excerpt: excerpt.trim(),
+      cover_image: coverImage.trim() || null,
+      cover_image_alt: coverImageAlt.trim() || null,
+      category: category.trim(),
+      tags,
+      featured,
+      draft,
+      seo_title: seoTitle.trim(),
+      seo_description: seoDescription.trim(),
+      publish_date: publishAt ? publishAt : null,
+    };
+    if (authorsSelectable && authorTouched && authorId) {
+      payload.author = Number(authorId);
+    }
+
+    setSubmitting(true);
+    try {
+      if (isEdit) {
+        await updatePost(Number(id), payload);
+      } else {
+        await createPost(payload);
+      }
+      setInitialSnapshot(currentSnapshot);
+      setFieldErrors({});
+      setSuccess(isEdit ? 'Post updated.' : 'Post created.');
+    } catch (err) {
+      if (isHttpError(err)) {
+        const field = mapErrorToField(err.message);
+        if (field) {
+          setFieldErrors({ [field]: err.message });
+        } else {
+          setFormError(err.message);
+        }
+      } else {
+        setFormError('Something went wrong. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const authorCurrentLabel = useMemo(() => {
+    if (isEdit) return existingAuthorName || '—';
+    return admin?.name ? `You — ${admin.name}` : 'You';
+  }, [isEdit, existingAuthorName, admin]);
+
+  if (notFound) {
+    return (
+      <div className="py-8 md:py-10">
+        <Container className="max-w-lg">
+          <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center">
+            <p className="text-slate-500 mb-6">This post no longer exists.</p>
+            <Button to="/admin/blogs" variant="outline" icon={ArrowLeft} iconPosition="leading">
+              Back to blogs
+            </Button>
+          </div>
+        </Container>
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-8 md:py-10">
+      <Container className="max-w-3xl">
+        <div className="mb-8">
+          <Button
+            to="/admin/blogs"
+            variant="ghost"
+            size="sm"
+            icon={ArrowLeft}
+            iconPosition="leading"
+            className="!px-3 !py-2 mb-4"
+            onClick={confirmDiscardIfDirty}
+          >
+            Back to blogs
+          </Button>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-primary tracking-tight mb-2">
+            {isEdit ? 'Edit post' : 'Create post'}
+          </h1>
+          <p className="text-slate-500 font-light">
+            {isEdit ? 'Update this post and save your changes.' : 'Draft a new blog post.'}
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center text-slate-500">
+            Loading…
+          </div>
+        ) : loadError ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 flex items-center gap-3 text-sm font-semibold text-rose-700">
+            <AlertTriangle size={16} className="shrink-0" aria-hidden="true" />
+            {loadError}
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} noValidate className="rounded-2xl border border-slate-100 bg-white p-6 md:p-8 space-y-5">
+            <Input
+              id={titleId}
+              label="Title"
+              value={title}
+              onChange={handleTitleChange}
+              error={fieldErrors.title}
+              disabled={submitting}
+              required
+            />
+
+            <div>
+              <Input
+                id={slugId}
+                label="Slug"
+                value={slug}
+                onChange={handleSlugChange}
+                error={fieldErrors.slug}
+                disabled={submitting}
+                required
+              />
+              {!fieldErrors.slug && (
+                <p className="field-hint">
+                  {slugTouched ? 'Manually edited — no longer follows the title.' : 'Auto-generated from the title.'}
+                </p>
+              )}
+            </div>
+
+            <Textarea
+              id={excerptId}
+              label="Short description"
+              rows={3}
+              value={excerpt}
+              onChange={(e) => setExcerpt(e.target.value)}
+              error={fieldErrors.excerpt}
+              disabled={submitting}
+              hint={!fieldErrors.excerpt ? `${excerpt.length}/400` : undefined}
+            />
+
+            <Textarea
+              id={contentId}
+              label="Content"
+              rows={16}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              error={fieldErrors.content}
+              disabled={submitting}
+              hint={!fieldErrors.content ? 'Plain text for now — the rich text editor lands in a follow-up pass.' : undefined}
+              required
+            />
+
+            <div className="grid sm:grid-cols-2 gap-5">
+              <div>
+                <Input
+                  id={coverImageId}
+                  label="Cover image path"
+                  value={coverImage}
+                  onChange={(e) => setCoverImage(e.target.value)}
+                  error={fieldErrors.coverImage}
+                  disabled={submitting}
+                  placeholder="/uploads/blog/covers/…"
+                />
+                <div className="mt-2 flex items-center gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleCoverFileChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    icon={Upload}
+                    iconPosition="leading"
+                    disabled={submitting || coverUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {coverUploading ? 'Uploading…' : 'Upload image'}
+                  </Button>
+                </div>
+                {coverUploadError && <p className="field-error" role="alert">{coverUploadError}</p>}
+              </div>
+
+              <div>
+                <span className="field-label">Preview</span>
+                <div className="w-full aspect-video rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+                  {coverImage ? (
+                    <img src={coverImage} alt={coverImageAlt} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs text-slate-400">No cover image</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Input
+              id={coverImageAltId}
+              label="Cover image alt text"
+              value={coverImageAlt}
+              onChange={(e) => setCoverImageAlt(e.target.value)}
+              error={fieldErrors.coverImageAlt}
+              disabled={submitting}
+            />
+
+            <div>
+              <span className="field-label">Author</span>
+              {authorsSelectable ? (
+                <select
+                  id={authorSelectId}
+                  className="field-input"
+                  value={authorId}
+                  disabled={submitting}
+                  onChange={(e) => {
+                    setAuthorId(e.target.value);
+                    setAuthorTouched(true);
+                  }}
+                >
+                  <option value="">{isEdit ? `Current: ${authorCurrentLabel}` : authorCurrentLabel}</option>
+                  {(authorOptions ?? []).map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.full_name} — {ROLE_LABELS[a.role]}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-500">
+                  {authorCurrentLabel}
+                </div>
+              )}
+              {fieldErrors.author && <p className="field-error" role="alert">{fieldErrors.author}</p>}
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-5">
+              <div>
+                <Input
+                  id={categoryId}
+                  label="Category"
+                  list={categoryListId}
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  error={fieldErrors.category}
+                  disabled={submitting}
+                  placeholder="Pick or type a new category"
+                />
+                <datalist id={categoryListId}>
+                  {(categoryOptions ?? []).map((c) => (
+                    <option key={c.id} value={c.name} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div>
+                <label htmlFor={tagsId} className="field-label">
+                  Tags
+                </label>
+                <div className="field-input flex flex-wrap items-center gap-1.5 py-2">
+                  {tags.map((tag) => (
+                    <Badge key={tag} variant="accent" size="sm" className="!inline-flex items-center gap-1">
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        disabled={submitting}
+                        aria-label={`Remove tag ${tag}`}
+                        className="hover:text-rose-600"
+                      >
+                        <X size={11} aria-hidden="true" />
+                      </button>
+                    </Badge>
+                  ))}
+                  <input
+                    id={tagsId}
+                    list={tagListId}
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagKeyDown}
+                    onBlur={() => addTag(tagInput)}
+                    disabled={submitting}
+                    placeholder={tags.length === 0 ? 'Type a tag, press Enter' : ''}
+                    className="flex-1 min-w-[8rem] outline-none text-sm bg-transparent"
+                  />
+                </div>
+                <datalist id={tagListId}>
+                  {(tagOptions ?? []).map((t) => (
+                    <option key={t.id} value={t.name} />
+                  ))}
+                </datalist>
+                {fieldErrors.tags && <p className="field-error" role="alert">{fieldErrors.tags}</p>}
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-5">
+              <div>
+                <label htmlFor={draftId} className="field-label">
+                  Status
+                </label>
+                <select
+                  id={draftId}
+                  className="field-input"
+                  value={draft ? 'draft' : 'published'}
+                  onChange={(e) => setDraft(e.target.value === 'draft')}
+                  disabled={submitting}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                </select>
+              </div>
+
+              <div>
+                <span className="field-label">Featured</span>
+                <label className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={featured}
+                    onChange={(e) => setFeatured(e.target.checked)}
+                    disabled={submitting}
+                    className="w-4 h-4 rounded accent-accent-strong"
+                  />
+                  <span className="text-sm font-semibold text-primary">
+                    {featured ? 'Featured' : 'Not featured'}
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <Input
+              id={publishAtId}
+              type="datetime-local"
+              label="Publish date & time"
+              value={publishAt}
+              onChange={(e) => setPublishAt(e.target.value)}
+              error={fieldErrors.publishAt}
+              disabled={submitting}
+              hint={!fieldErrors.publishAt ? 'Leave blank to publish immediately (or keep as a draft).' : undefined}
+            />
+
+            <div className="pt-2 border-t border-slate-100 space-y-5">
+              <p className="field-label !mb-0">SEO</p>
+              <Input
+                id={seoTitleId}
+                label="SEO title"
+                value={seoTitle}
+                onChange={(e) => setSeoTitle(e.target.value)}
+                error={fieldErrors.seoTitle}
+                disabled={submitting}
+                hint={!fieldErrors.seoTitle ? `${seoTitle.length}/200` : undefined}
+              />
+              <Textarea
+                id={seoDescriptionId}
+                label="SEO description"
+                rows={3}
+                value={seoDescription}
+                onChange={(e) => setSeoDescription(e.target.value)}
+                error={fieldErrors.seoDescription}
+                disabled={submitting}
+                hint={!fieldErrors.seoDescription ? `${seoDescription.length}/400` : undefined}
+              />
+            </div>
+
+            {formError && (
+              <p className="flex items-start gap-2 text-sm font-semibold text-rose-600 bg-danger/5 border border-danger/20 rounded-xl px-4 py-3" role="alert">
+                <AlertTriangle size={15} className="shrink-0 mt-0.5" aria-hidden="true" />
+                {formError}
+              </p>
+            )}
+
+            {success && (
+              <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700 bg-success/10 border border-success/20 rounded-xl px-4 py-3" role="status">
+                <CheckCircle2 size={15} className="shrink-0" aria-hidden="true" />
+                {success}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={submitting}
+                onClick={() => {
+                  if (dirty && !window.confirm(UNSAVED_CHANGES_MESSAGE)) return;
+                  navigate('/admin/blogs');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" icon={isEdit ? Save : FilePlus2} iconPosition="leading" disabled={submitting}>
+                {submitting ? 'Saving…' : isEdit ? 'Save changes' : 'Create post'}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Container>
+    </div>
+  );
+}

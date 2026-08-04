@@ -71,6 +71,8 @@ export interface BlogPost {
   slug: string;
   excerpt: string;
   content: string;
+  cover_image: string | null;
+  cover_image_alt: string | null;
   author: string | null;
   category: string | null;
   tags: string[];
@@ -78,6 +80,8 @@ export interface BlogPost {
   draft: boolean;
   seo_title: string | null;
   seo_description: string | null;
+  /** Scheduling target (may be in the future); see `backend/helpers/Blog.php::blog_compute_publish_state`. */
+  publish_at: string | null;
   publish_date: string | null;
   created_at: string;
   updated_at: string;
@@ -106,6 +110,8 @@ export interface CreateBlogPostInput {
   content: string;
   slug?: string;
   excerpt?: string;
+  cover_image?: string | null;
+  cover_image_alt?: string | null;
   author?: string | number;
   category?: string;
   tags?: string[];
