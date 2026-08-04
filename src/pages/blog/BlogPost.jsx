@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, ChevronRight, FileText, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, ChevronRight, FileText, RefreshCw } from 'lucide-react';
 import { Container, PageSection, Button, Badge } from '../../components/ui';
 import {
   BlogGrid,
@@ -22,6 +22,7 @@ const BlogPost = () => {
   const { slug } = useParams();
   const [post, setPost] = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [publishedPosts, setPublishedPosts] = useState([]);
 
   // Reset for a new slug during render (not inside the effect below) per
@@ -32,22 +33,42 @@ const BlogPost = () => {
     setLoadedSlug(slug);
     setPost(null);
     setNotFound(false);
+    setLoadError(false);
   }
 
-  useEffect(() => {
+  // show.php already returns a draft to a logged-in admin and 404s it for
+  // everyone else, so there's no separate dev-only draft-preview path here
+  // the way there was for the old static-markdown content model.
+  const fetchPost = useCallback(() => {
     let cancelled = false;
 
-    // show.php already returns a draft to a logged-in admin and 404s it for
-    // everyone else, so there's no separate dev-only draft-preview path here
-    // the way there was for the old static-markdown content model.
-    getPostBySlug(slug)
+    // Nested inside a resolved-promise `.then` (rather than called directly
+    // in the effect body) so the reset isn't a synchronous setState call in
+    // the effect — see react-hooks/set-state-in-effect.
+    Promise.resolve()
+      .then(() => {
+        setNotFound(false);
+        setLoadError(false);
+        return getPostBySlug(slug);
+      })
       .then((data) => {
         if (!cancelled) setPost(toDisplayPost(data));
       })
       .catch((err) => {
         if (cancelled) return;
         if (isHttpError(err) && err.status === 404) setNotFound(true);
+        else setLoadError(true);
       });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  useEffect(() => fetchPost(), [fetchPost]);
+
+  useEffect(() => {
+    let cancelled = false;
 
     listPosts({ per_page: 100 })
       .then((result) => {
@@ -106,7 +127,7 @@ const BlogPost = () => {
   }, [post]);
 
   useSEO({
-    title: post ? post.title : notFound ? 'Post not found' : 'Loading…',
+    title: post ? post.title : notFound ? 'Post not found' : loadError ? 'Something went wrong' : 'Loading…',
     description: post ? post.description : "There's no published post at this address.",
     path: post ? canonicalPath : undefined,
     image: post?.coverImage ?? undefined,
@@ -117,7 +138,7 @@ const BlogPost = () => {
     jsonLd,
   });
 
-  if (!post && !notFound) {
+  if (!post && !notFound && !loadError) {
     return (
       <PageSection center>
         <div
@@ -125,6 +146,35 @@ const BlogPost = () => {
           role="status"
           aria-label="Loading…"
         />
+      </PageSection>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <PageSection center>
+        <Container className="max-w-xl">
+          <div className="mx-auto mb-7 w-16 h-16 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600">
+            <AlertTriangle size={28} aria-hidden="true" />
+          </div>
+
+          <p className="eyebrow mb-4">Blog</p>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-primary mb-4 tracking-tight">
+            Could not load this article.
+          </h1>
+          <p className="text-base text-slate-500 font-light leading-relaxed mb-10">
+            Something went wrong while fetching this post. Check your connection and try again.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button onClick={fetchPost} icon={RefreshCw}>
+              Try again
+            </Button>
+            <Button to="/blog" variant="outline">
+              Back to blog
+            </Button>
+          </div>
+        </Container>
       </PageSection>
     );
   }
