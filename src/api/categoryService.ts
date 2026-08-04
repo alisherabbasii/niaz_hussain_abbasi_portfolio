@@ -2,13 +2,11 @@ import { apiClient } from './client';
 import type { Category } from './types';
 
 /**
- * Categories today only exist as a find-or-create side effect of
- * `blog/create.php` and `blog/update.php` (see
- * `backend/helpers/Blog.php::blog_resolve_category_id`) — there is no
- * standalone `backend/api/categories/*` yet. These calls are scaffolded
- * against the endpoints `docs/01-CMS-ARCHITECTURE.md` plans for admin
- * category management, following the same per-action file convention as
- * `backend/api/blog/*.php`. They will 404 until that backend work lands.
+ * Categories are also find-or-created as a side effect of `blog/create.php`
+ * and `blog/update.php` (see `backend/helpers/Blog.php::blog_resolve_category_id`).
+ * `index.php` is a public read (used by the blog listing's filter pills);
+ * create/update/delete require an authenticated admin session — see
+ * `backend/api/categories/*.php`.
  */
 
 interface CategoryEnvelope {

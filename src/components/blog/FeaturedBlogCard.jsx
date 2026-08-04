@@ -22,7 +22,7 @@ const FeaturedBlogCard = ({ post, className }) => (
       {post.coverImage ? (
         <img
           src={post.coverImage}
-          alt={post.coverImageAlt}
+          alt={post.coverImageAlt || post.title}
           loading="eager"
           decoding="async"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
