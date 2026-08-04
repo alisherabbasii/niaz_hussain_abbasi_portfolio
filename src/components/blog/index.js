@@ -8,4 +8,4 @@ export { default as TagList } from './TagList';
 export { default as BlogEmptyState } from './BlogEmptyState';
 export { default as TableOfContents } from './TableOfContents';
 export { default as ShareButtons } from './ShareButtons';
-export { default as MarkdownContent } from './MarkdownContent';
+export { default as HtmlContent } from './HtmlContent';

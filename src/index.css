@@ -148,6 +148,17 @@
     @apply mt-1.5 text-xs font-medium text-danger;
   }
 
+  /* TipTap's Placeholder extension marks the empty node with this class and
+     exposes the text via the data-placeholder attribute it also sets. */
+  .tiptap p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    color: var(--color-primary);
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
   /* Loading primitive. Shimmer is disabled globally under prefers-reduced-motion
      via the base-layer media query above. */
   .skeleton {

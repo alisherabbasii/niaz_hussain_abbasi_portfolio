@@ -1,10 +1,8 @@
 import { Calendar, Clock, User } from 'lucide-react';
 import { Modal, Badge } from '../../../components/ui';
-import { CategoryBadge, TagList, MarkdownContent } from '../../../components/blog';
+import { CategoryBadge, TagList, HtmlContent } from '../../../components/blog';
+import { ARTICLE_PROSE_CLASSES } from '../../../components/blog/articleProseClasses';
 import { formatDate, formatReadingTime, calculateReadingTimeMinutes } from '../../../features/blog/utils';
-
-const ARTICLE_CLASSES =
-  'max-w-none text-slate-600 [&>h2]:text-2xl [&>h2]:font-bold [&>h2]:text-primary [&>h2]:mt-10 [&>h2]:mb-4 [&>h3]:text-xl [&>h3]:font-bold [&>h3]:text-primary [&>h3]:mt-8 [&>h3]:mb-3 [&>p]:leading-relaxed [&>p]:mb-5 [&>ul]:list-disc [&>ul]:pl-6 [&>ul]:mb-5 [&>ul]:space-y-1.5 [&>ol]:list-decimal [&>ol]:pl-6 [&>ol]:mb-5 [&>ol]:space-y-1.5 [&_strong]:text-primary [&_strong]:font-bold [&>p.italic]:text-slate-500';
 
 /** Read-only rendering of one post as it'll appear on the live site — same components BlogPost.jsx uses. */
 const PostPreviewModal = ({ post, onClose }) => {
@@ -53,7 +51,7 @@ const PostPreviewModal = ({ post, onClose }) => {
         </div>
       )}
 
-      <MarkdownContent content={post.content} className={ARTICLE_CLASSES} />
+      <HtmlContent content={post.content} className={ARTICLE_PROSE_CLASSES} />
 
       {post.tags.length > 0 && <TagList tags={post.tags} className="mt-6" />}
     </Modal>

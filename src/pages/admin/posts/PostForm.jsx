@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { Container, Button, Input, Textarea, Badge } from '../../../components/ui';
+import { TiptapEditor } from '../../../components/blog/editor';
 import { getPostById, createPost, updatePost } from '../../../api/blogService';
 import { listCategories } from '../../../api/categoryService';
 import { listTags } from '../../../api/tagService';
@@ -91,7 +92,7 @@ function defaultSnapshot() {
   };
 }
 
-/** Shared create/edit form for `/admin/blogs/new` and `/admin/blogs/:id/edit`. Plain-textarea content for now — TipTap lands in a follow-up pass. */
+/** Shared create/edit form for `/admin/blogs/new` and `/admin/blogs/:id/edit`. */
 export default function PostForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -628,15 +629,13 @@ export default function PostForm() {
               hint={!fieldErrors.excerpt ? `${excerpt.length}/400` : undefined}
             />
 
-            <Textarea
+            <TiptapEditor
               id={contentId}
               label="Content"
-              rows={16}
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={setContent}
               error={fieldErrors.content}
               disabled={submitting}
-              hint={!fieldErrors.content ? 'Plain text for now — the rich text editor lands in a follow-up pass.' : undefined}
               required
             />
 

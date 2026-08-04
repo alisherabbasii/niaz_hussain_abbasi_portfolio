@@ -6,11 +6,12 @@ import {
   BlogGrid,
   BlogMeta,
   CategoryBadge,
-  MarkdownContent,
+  HtmlContent,
   ShareButtons,
   TableOfContents,
   TagList,
 } from '../../components/blog';
+import { ARTICLE_PROSE_CLASSES } from '../../components/blog/articleProseClasses';
 import { getPostBySlug, listPosts } from '../../api/blogService';
 import { isHttpError } from '../../api/httpError';
 import { formatDate, getRelatedPosts, toDisplayPost } from '../../features/blog/utils';
@@ -231,10 +232,7 @@ const BlogPost = () => {
 
         {showToc && <TableOfContents />}
 
-        <MarkdownContent
-          content={post.content}
-          className="max-w-none text-slate-600 [&>h2]:text-2xl [&>h2]:font-bold [&>h2]:text-primary [&>h2]:mt-10 [&>h2]:mb-4 [&>h3]:text-xl [&>h3]:font-bold [&>h3]:text-primary [&>h3]:mt-8 [&>h3]:mb-3 [&>p]:leading-relaxed [&>p]:mb-5 [&>ul]:list-disc [&>ul]:pl-6 [&>ul]:mb-5 [&>ul]:space-y-1.5 [&>ol]:list-decimal [&>ol]:pl-6 [&>ol]:mb-5 [&>ol]:space-y-1.5 [&_strong]:text-primary [&_strong]:font-bold [&>p.italic]:text-slate-500"
-        />
+        <HtmlContent content={post.content} className={ARTICLE_PROSE_CLASSES} />
 
         {post.tags.length > 0 && (
           <div className="mt-2 mb-2">
