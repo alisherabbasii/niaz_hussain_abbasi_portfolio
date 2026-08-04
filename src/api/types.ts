@@ -107,6 +107,16 @@ export interface ListBlogPostsResult {
   pagination: Pagination;
 }
 
+/** Shape produced by `backend/api/blog/related.php`. */
+export interface RelatedPostsResult {
+  /** Up to a small fixed number, ranked by category match then shared tags then recency. Empty when nothing qualifies. */
+  related: BlogPost[];
+  /** Next-older public post in publication order, or null if this is the first. */
+  previous: BlogPost | null;
+  /** Next-newer public post in publication order, or null if this is the most recent. */
+  next: BlogPost | null;
+}
+
 /** Body accepted by `backend/api/blog/create.php`. */
 export interface CreateBlogPostInput {
   title: string;

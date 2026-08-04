@@ -12,9 +12,9 @@ import {
   TagList,
 } from '../../components/blog';
 import { ARTICLE_PROSE_CLASSES } from '../../components/blog/articleProseClasses';
-import { getPostBySlug, listPosts } from '../../api/blogService';
+import { getPostBySlug, getRelatedPosts } from '../../api/blogService';
 import { isHttpError } from '../../api/httpError';
-import { formatDate, getRelatedPosts, toDisplayPost } from '../../features/blog/utils';
+import { formatDate, toDisplayPost } from '../../features/blog/utils';
 import { TOC_MIN_READING_MINUTES } from '../../features/blog/constants';
 import { useSEO } from '../../utils/useSEO';
 
@@ -23,7 +23,9 @@ const BlogPost = () => {
   const [post, setPost] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const [publishedPosts, setPublishedPosts] = useState([]);
+  const [relatedPosts, setRelatedPosts] = useState([]);
+  const [previousPost, setPreviousPost] = useState(null);
+  const [nextPost, setNextPost] = useState(null);
 
   // Reset for a new slug during render (not inside the effect below) per
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
@@ -34,6 +36,9 @@ const BlogPost = () => {
     setPost(null);
     setNotFound(false);
     setLoadError(false);
+    setRelatedPosts([]);
+    setPreviousPost(null);
+    setNextPost(null);
   }
 
   // show.php already returns a draft to a logged-in admin and 404s it for
@@ -70,9 +75,12 @@ const BlogPost = () => {
   useEffect(() => {
     let cancelled = false;
 
-    listPosts({ per_page: 100 })
-      .then((result) => {
-        if (!cancelled) setPublishedPosts(result.data.map(toDisplayPost));
+    getRelatedPosts(slug)
+      .then(({ related, previous, next }) => {
+        if (cancelled) return;
+        setRelatedPosts(related.map(toDisplayPost));
+        setPreviousPost(previous ? toDisplayPost(previous) : null);
+        setNextPost(next ? toDisplayPost(next) : null);
       })
       .catch(() => {
         // Related-articles/prev-next navigation just won't show — the post itself still renders.
@@ -82,18 +90,6 @@ const BlogPost = () => {
       cancelled = true;
     };
   }, [slug]);
-
-  const relatedPosts = useMemo(() => (post ? getRelatedPosts(post, publishedPosts) : []), [post, publishedPosts]);
-
-  const { previousPost, nextPost } = useMemo(() => {
-    if (!post) return { previousPost: null, nextPost: null };
-    const index = publishedPosts.findIndex((candidate) => candidate.slug === post.slug);
-    if (index === -1) return { previousPost: null, nextPost: null };
-    return {
-      previousPost: publishedPosts[index + 1] ?? null,
-      nextPost: publishedPosts[index - 1] ?? null,
-    };
-  }, [post, publishedPosts]);
 
   const canonicalPath = `/blog/${slug}`;
 

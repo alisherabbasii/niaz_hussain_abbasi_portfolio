@@ -10,7 +10,6 @@ import {
   formatReadingTime,
   generateExcerpt,
   generateSlug,
-  getRelatedPosts,
   isValidSlug,
   normalizeDate,
   sortPostsByDate,
@@ -192,36 +191,5 @@ describe('filterByCategory / filterByTag', () => {
   it('filters by tag membership', () => {
     expect(filterByTag([a, b], 'faith').map((p) => p.slug)).toEqual(['b']);
     expect(filterByTag([a, b], 'grit').map((p) => p.slug).sort()).toEqual(['a', 'b']);
-  });
-});
-
-describe('getRelatedPosts', () => {
-  const source = makePost({ slug: 'source', category: 'Leadership', tags: ['grit', 'faith'] });
-  const sameCategory = makePost({ slug: 'same-category', category: 'Leadership', tags: [] });
-  const sharedTags = makePost({ slug: 'shared-tags', category: 'Community', tags: ['grit', 'faith'] });
-  const unrelated = makePost({ slug: 'unrelated', category: 'Community', tags: ['other'] });
-  const draftMatch = makePost({ slug: 'draft-match', category: 'Leadership', tags: [], draft: true });
-
-  it('excludes the source post itself and drafts', () => {
-    const related = getRelatedPosts(source, [source, sameCategory, draftMatch], 5);
-    expect(related.map((p) => p.slug)).not.toContain('source');
-    expect(related.map((p) => p.slug)).not.toContain('draft-match');
-  });
-
-  it('excludes posts that score zero (no shared category or tags)', () => {
-    const related = getRelatedPosts(source, [source, unrelated], 5);
-    expect(related).toHaveLength(0);
-  });
-
-  it('ranks a shared-tags-but-different-category post above a same-category-no-tags post when tag score exceeds category score', () => {
-    const related = getRelatedPosts(source, [source, sameCategory, sharedTags], 5);
-    // sameCategory: +2 (category). sharedTags: +1 (grit) +1 (faith) = +2. Tie on score -> break by recency (equal here) -> stable-ish either order is acceptable,
-    // but both must be present and unrelated/self excluded.
-    expect(related.map((p) => p.slug).sort()).toEqual(['same-category', 'shared-tags']);
-  });
-
-  it('respects the limit', () => {
-    const related = getRelatedPosts(source, [source, sameCategory, sharedTags], 1);
-    expect(related).toHaveLength(1);
   });
 });

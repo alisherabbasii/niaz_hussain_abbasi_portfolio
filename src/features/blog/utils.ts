@@ -1,10 +1,7 @@
 import {
   DEFAULT_EXCERPT_LENGTH,
   DEFAULT_FEATURED_POSTS_LIMIT,
-  DEFAULT_RELATED_POSTS_LIMIT,
   DEFAULT_WORDS_PER_MINUTE,
-  RELATED_POST_CATEGORY_SCORE,
-  RELATED_POST_TAG_SCORE,
   SLUG_PATTERN,
 } from './constants';
 import type { BlogPost } from './types';
@@ -125,35 +122,6 @@ export function filterByCategory(posts: BlogPost[], category: string): BlogPost[
 
 export function filterByTag(posts: BlogPost[], tag: string): BlogPost[] {
   return posts.filter((post) => post.tags.includes(tag));
-}
-
-/**
- * Scores every other published post against `post` — +{@link RELATED_POST_CATEGORY_SCORE}
- * for a matching category, +{@link RELATED_POST_TAG_SCORE} per shared tag —
- * and returns the top `limit`, highest score first, ties broken by most recent.
- * Posts scoring 0 are excluded.
- */
-export function getRelatedPosts(
-  post: BlogPost,
-  allPosts: BlogPost[],
-  limit = DEFAULT_RELATED_POSTS_LIMIT
-): BlogPost[] {
-  const scored = filterPublishedPosts(allPosts)
-    .filter((candidate) => candidate.slug !== post.slug)
-    .map((candidate) => {
-      let score = 0;
-      if (candidate.category === post.category) score += RELATED_POST_CATEGORY_SCORE;
-      score += candidate.tags.filter((tag) => post.tags.includes(tag)).length * RELATED_POST_TAG_SCORE;
-      return { candidate, score };
-    })
-    .filter(({ score }) => score > 0);
-
-  scored.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    return new Date(b.candidate.publishedAt).getTime() - new Date(a.candidate.publishedAt).getTime();
-  });
-
-  return scored.slice(0, limit).map(({ candidate }) => candidate);
 }
 
 /**

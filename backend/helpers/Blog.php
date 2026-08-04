@@ -396,6 +396,53 @@ function blog_select_base(): string
              LEFT JOIN categories c ON c.id = bp.category_id';
 }
 
+/**
+ * WHERE-clause fragment matching {@see blog_is_visible_to_public}, for
+ * queries that filter at the SQL level instead of fetching rows into PHP
+ * first (see backend/api/blog/related.php). References a `:now` named
+ * placeholder the caller must bind to `date('Y-m-d H:i:s')`.
+ */
+function blog_public_visibility_sql(string $alias = 'bp'): string
+{
+    return "{$alias}.status = 'published' AND ({$alias}.publish_at IS NULL OR {$alias}.publish_at <= :now)";
+}
+
+/**
+ * The nearest public post to ($excludeId, $publishAt) in publication order,
+ * in the given direction — a single indexed lookup rather than paging
+ * through every post to find a neighbor.
+ *
+ * 'next' means the next-*newer* post (used to walk forward toward the most
+ * recent article); 'previous' means the next-*older* one. `$publishAt` is
+ * the reference post's own `publish_at`; null (an unpublished reference,
+ * e.g. an admin previewing a draft) matches no rows, since NULL comparisons
+ * are never true in SQL — so a draft preview simply shows no neighbor.
+ */
+function blog_fetch_adjacent_public_post(PDO $pdo, int $excludeId, ?string $publishAt, string $direction): ?array
+{
+    $comparison = $direction === 'next' ? '>' : '<';
+    $order = $direction === 'next' ? 'ASC' : 'DESC';
+    $visible = blog_public_visibility_sql();
+
+    $sql = blog_select_base() . " WHERE bp.id != :exclude_id AND {$visible}
+             AND (bp.publish_at {$comparison} :pub_at_a
+                  OR (bp.publish_at = :pub_at_b AND bp.id {$comparison} :tie_id))
+             ORDER BY bp.publish_at {$order}, bp.id {$order}
+             LIMIT 1";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindValue('exclude_id', $excludeId, PDO::PARAM_INT);
+    $stmt->bindValue('tie_id', $excludeId, PDO::PARAM_INT);
+    $stmt->bindValue('pub_at_a', $publishAt, $publishAt === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+    $stmt->bindValue('pub_at_b', $publishAt, $publishAt === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+    $stmt->bindValue('now', date('Y-m-d H:i:s'));
+    $stmt->execute();
+
+    $row = $stmt->fetch();
+
+    return $row === false ? null : $row;
+}
+
 /** Format one blog_posts row (from blog_select_base()) plus its tags into the API's JSON shape. */
 function blog_format_post(array $row, array $tags): array
 {
