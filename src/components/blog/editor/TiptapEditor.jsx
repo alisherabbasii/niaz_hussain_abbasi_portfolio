@@ -7,6 +7,8 @@ import { Placeholder } from '@tiptap/extension-placeholder';
 import { cn } from '../../../utils/cn';
 import { isAllowedLinkUrl } from '../../../features/blog/editorContent';
 import EditorToolbar from './EditorToolbar';
+import ContentImage from './imageExtension';
+import { useEditorImageUpload } from './useEditorImageUpload';
 
 /**
  * Direct-child/descendant Tailwind selectors (not the `.prose` typography
@@ -62,6 +64,34 @@ export default function TiptapEditor({
     onChangeRef.current = onChange;
   }, [onChange]);
 
+  // `insertImageFile` doesn't exist until after the editor itself is
+  // created, so `handleDrop`/`handleImagePaste` below (referenced from
+  // editorProps both at construction and in the reactive setOptions effect)
+  // read it through this ref rather than closing over it directly.
+  const insertImageFileRef = useRef(() => {});
+
+  // Stable references (not recreated per render) so they can be passed
+  // identically to both the initial `useEditor` call and the reactive
+  // `setOptions` effect below — `setOptions` replaces `editorProps` wholesale
+  // rather than merging it, so every editorProps object needs its own copy.
+  const handleImageDropRef = useRef((view, event) => {
+    if (!view.editable) return false;
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    if (files.length === 0) return false;
+    event.preventDefault();
+    const target = view.posAtCoords({ left: event.clientX, top: event.clientY });
+    insertImageFileRef.current(files[0], target ? target.pos : view.state.selection.from);
+    return true;
+  });
+  const handleImagePasteRef = useRef((view, event) => {
+    if (!view.editable) return false;
+    const files = Array.from(event.clipboardData?.files ?? []).filter((file) => file.type.startsWith('image/'));
+    if (files.length === 0) return false;
+    event.preventDefault();
+    insertImageFileRef.current(files[0], view.state.selection.from);
+    return true;
+  });
+
   // `content` below is only read on this first construction — the trailing
   // `[]` deps means useEditor never recreates the instance from later
   // `value` prop changes, which is what makes this safe to seed directly
@@ -91,6 +121,7 @@ export default function TiptapEditor({
         TextAlign.configure({ types: ['heading', 'paragraph'], defaultAlignment: 'left' }),
         TableKit.configure({ table: { resizable: false } }),
         Placeholder.configure({ placeholder: 'Write the post content…' }),
+        ContentImage,
       ],
       content: value ?? '',
       editable: !disabled,
@@ -101,6 +132,12 @@ export default function TiptapEditor({
           'aria-multiline': 'true',
           'aria-label': label,
         },
+        // Only intercepts an actual dropped/pasted image *file* (e.g. a
+        // screenshot paste, or a file dragged in from the OS) — dropped
+        // editor content (node drag/reorder) and pasted rich HTML/text both
+        // fall through to TipTap's default handling untouched.
+        handleDrop: (view, event) => handleImageDropRef.current(view, event),
+        handlePaste: (view, event) => handleImagePasteRef.current(view, event),
       },
       onUpdate: ({ editor: instance }) => {
         onChangeRef.current(instance.isEmpty ? '' : instance.getHTML());
@@ -129,9 +166,20 @@ export default function TiptapEditor({
           'aria-invalid': error ? 'true' : undefined,
           'aria-describedby': describedBy,
         },
+        // `setOptions` replaces `editorProps` wholesale rather than merging
+        // it, so the drop/paste handlers need to be repeated here — see the
+        // refs' comment above.
+        handleDrop: (view, event) => handleImageDropRef.current(view, event),
+        handlePaste: (view, event) => handleImagePasteRef.current(view, event),
       },
     });
   }, [editor, editorId, label, required, error, describedBy]);
+
+  const { uploading: imageUploading, error: imageUploadError, insertImageFile } = useEditorImageUpload(editor);
+
+  useEffect(() => {
+    insertImageFileRef.current = insertImageFile;
+  }, [insertImageFile]);
 
   return (
     <div>
@@ -148,9 +196,19 @@ export default function TiptapEditor({
           disabled && 'opacity-60'
         )}
       >
-        <EditorToolbar editor={editor} disabled={disabled} />
+        <EditorToolbar
+          editor={editor}
+          disabled={disabled}
+          imageUploading={imageUploading}
+          onInsertImageFile={insertImageFile}
+        />
         <EditorContent editor={editor} />
       </div>
+      {imageUploadError && (
+        <p className="field-error mt-1.5" role="alert">
+          {imageUploadError}
+        </p>
+      )}
       {hint && !error && (
         <p id={hintId} className="field-hint">
           {hint}

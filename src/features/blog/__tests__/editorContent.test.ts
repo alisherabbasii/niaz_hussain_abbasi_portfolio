@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isAllowedLinkUrl, normalizeLinkUrl } from '../editorContent';
+import { isAllowedImageSrc, isAllowedLinkUrl, normalizeLinkUrl } from '../editorContent';
 
 describe('isAllowedLinkUrl', () => {
   it('accepts http, https, mailto, and tel URLs', () => {
@@ -52,5 +52,28 @@ describe('normalizeLinkUrl', () => {
   it('returns null for empty/whitespace input', () => {
     expect(normalizeLinkUrl('')).toBeNull();
     expect(normalizeLinkUrl('   ')).toBeNull();
+  });
+});
+
+describe('isAllowedImageSrc', () => {
+  it('accepts same-origin relative upload paths', () => {
+    expect(isAllowedImageSrc('/uploads/blog/content/abc123.jpg')).toBe(true);
+  });
+
+  it('accepts absolute http/https URLs', () => {
+    expect(isAllowedImageSrc('https://example.com/image.png')).toBe(true);
+    expect(isAllowedImageSrc('http://example.com/image.png')).toBe(true);
+  });
+
+  it('rejects data:, blob:, javascript:, and other dangerous schemes', () => {
+    expect(isAllowedImageSrc('data:image/png;base64,iVBORw0KGgo=')).toBe(false);
+    expect(isAllowedImageSrc('blob:http://example.com/uuid')).toBe(false);
+    expect(isAllowedImageSrc('javascript:alert(1)')).toBe(false);
+    expect(isAllowedImageSrc('file:///etc/passwd')).toBe(false);
+  });
+
+  it('rejects empty/unparseable input', () => {
+    expect(isAllowedImageSrc('')).toBe(false);
+    expect(isAllowedImageSrc('   ')).toBe(false);
   });
 });

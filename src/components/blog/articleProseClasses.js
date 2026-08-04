@@ -19,4 +19,11 @@ export const ARTICLE_PROSE_CLASSES =
   '[&>p.italic]:text-slate-500 ' +
   '[&>table]:block [&>table]:overflow-x-auto [&>table]:max-w-full [&>table]:my-6 [&>table]:border-collapse ' +
   '[&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-primary ' +
-  '[&_td]:border [&_td]:border-slate-200 [&_td]:px-3 [&_td]:py-2';
+  '[&_td]:border [&_td]:border-slate-200 [&_td]:px-3 [&_td]:py-2 ' +
+  // TipTap content images: `data-align` (written by the editor's image
+  // node) has no visual effect on its own — these rules are what actually
+  // apply the chosen alignment when the post is rendered for readers.
+  '[&>img]:max-w-full [&>img]:h-auto [&>img]:rounded-lg [&>img]:my-6 [&>img]:block ' +
+  '[&>img[data-align="center"]]:mx-auto ' +
+  '[&>img[data-align="right"]]:ml-auto ' +
+  '[&>img[data-align="left"]]:mr-auto';

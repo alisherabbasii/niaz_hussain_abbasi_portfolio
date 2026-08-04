@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useEditorState } from '@tiptap/react';
 import {
   AlignCenter,
@@ -10,11 +10,13 @@ import {
   Heading2,
   Heading3,
   Heading4,
+  ImagePlus,
   Italic,
   Link2,
   Link2Off,
   List,
   ListOrdered,
+  Loader2,
   Minus,
   Pilcrow,
   Quote,
@@ -27,8 +29,9 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import LinkDialog from './LinkDialog';
+import { EDITOR_IMAGE_ALLOWED_MIME_TYPES } from './useEditorImageUpload';
 
-const ToolbarButton = ({ label, icon: Icon, active, disabled, onClick }) => (
+const ToolbarButton = ({ label, icon: Icon, iconClassName, active, disabled, onClick }) => (
   <button
     type="button"
     aria-label={label}
@@ -44,7 +47,7 @@ const ToolbarButton = ({ label, icon: Icon, active, disabled, onClick }) => (
       active && 'bg-accent-strong/10 text-accent-strong'
     )}
   >
-    <Icon size={16} aria-hidden="true" />
+    <Icon size={16} aria-hidden="true" className={iconClassName} />
   </button>
 );
 
@@ -70,8 +73,9 @@ const ToolbarPillButton = ({ label, icon: Icon, text, disabled, onClick }) => (
 const Divider = () => <span className="w-px h-6 bg-slate-200 mx-0.5 shrink-0" aria-hidden="true" />;
 
 /** Toolbar for TiptapEditor — flex-wraps for mobile rather than relying on horizontal scroll. */
-export default function EditorToolbar({ editor, disabled }) {
+export default function EditorToolbar({ editor, disabled, imageUploading, onInsertImageFile }) {
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const imageFileInputRef = useRef(null);
 
   const state = useEditorState({
     editor,
@@ -232,6 +236,13 @@ export default function EditorToolbar({ editor, disabled }) {
         onClick={() => editor.chain().focus().unsetLink().run()}
       />
       <ToolbarButton
+        label={imageUploading ? 'Uploading image…' : 'Insert image'}
+        icon={imageUploading ? Loader2 : ImagePlus}
+        iconClassName={imageUploading ? 'animate-spin' : undefined}
+        disabled={disabledAll || imageUploading}
+        onClick={() => imageFileInputRef.current?.click()}
+      />
+      <ToolbarButton
         label="Horizontal rule"
         icon={Minus}
         disabled={disabledAll}
@@ -302,6 +313,18 @@ export default function EditorToolbar({ editor, disabled }) {
           </div>
         </>
       )}
+
+      <input
+        ref={imageFileInputRef}
+        type="file"
+        accept={EDITOR_IMAGE_ALLOWED_MIME_TYPES.join(',')}
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (file) onInsertImageFile?.(file);
+        }}
+      />
 
       <LinkDialog editor={editor} open={linkDialogOpen} onClose={() => setLinkDialogOpen(false)} />
     </div>

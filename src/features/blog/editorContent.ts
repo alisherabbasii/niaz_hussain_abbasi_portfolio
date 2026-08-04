@@ -1,7 +1,8 @@
 /**
  * Framework-neutral helpers for the TipTap content editor: link URL
  * validation (shared between the Link mark's `isAllowedUri` and the link
- * insertion dialog) and empty-content detection.
+ * insertion dialog), image URL validation (shared between the Image node's
+ * parsing and the upload/insert flow), and empty-content detection.
  */
 
 /** The only schemes the editor's Link mark and link dialog accept. */
@@ -45,4 +46,26 @@ export function normalizeLinkUrl(raw: string): string | null {
   }
 
   return isAllowedLinkUrl(candidate) ? candidate : null;
+}
+
+/**
+ * True if `src` is safe to render as an `<img>` source: resolves (relative
+ * to the current origin, so `/uploads/...` — what `upload/editor.php`
+ * returns — passes) to an http/https URL. Unlike `isAllowedLinkUrl`, a
+ * relative path is expected and allowed here since uploaded images are
+ * stored/served same-origin. Rejects `javascript:`, `data:` (base64 images
+ * must never be persisted in stored HTML), `blob:` (local-only, meaningless
+ * once saved), and any other non-http(s) scheme.
+ */
+export function isAllowedImageSrc(src: string): boolean {
+  if (typeof src !== 'string' || src.trim() === '') return false;
+  try {
+    // The base is an arbitrary same-scheme placeholder used only so a
+    // relative path (e.g. `/uploads/...`) parses — an absolute URL in `src`
+    // ignores it entirely and resolves to its own scheme.
+    const parsed = new URL(src, 'http://localhost');
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
