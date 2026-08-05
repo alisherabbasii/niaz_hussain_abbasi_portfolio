@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../helpers/Response.php';
 require_once __DIR__ . '/../../helpers/Session.php';
 require_once __DIR__ . '/../../helpers/Database.php';
 require_once __DIR__ . '/../../helpers/Blog.php';
+require_once __DIR__ . '/../../helpers/HtmlSanitizer.php';
 require_once __DIR__ . '/../../helpers/Permissions.php';
 require_once __DIR__ . '/../../middleware/CsrfMiddleware.php';
 require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
@@ -65,6 +66,15 @@ if ($title === '' || blog_strlen($title) > 200) {
 
 if ($content === '') {
     json_response(422, ['error' => 'content is required']);
+}
+
+// The single authoritative sanitization point for post content — see
+// docs/BLOG-HTML-SANITIZATION.md. Everything downstream (the DB, the
+// public read API, the frontend renderer) receives/reads already-clean
+// HTML, so nothing else needs to sanitize again.
+$content = blog_sanitize_html($content);
+if ($content === '') {
+    json_response(422, ['error' => 'content contains no permitted HTML after sanitization']);
 }
 
 $slug = is_string($body['slug'] ?? null) ? trim($body['slug']) : '';
