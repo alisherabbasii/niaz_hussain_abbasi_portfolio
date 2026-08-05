@@ -59,7 +59,7 @@ export function formatDate(
   return new Intl.DateTimeFormat(locale, options).format(date);
 }
 
-/** Strips HTML tags for use in reading-time/excerpt calculations. Not a sanitizer — see markdown.ts. */
+/** Strips HTML tags for use in reading-time/excerpt calculations. Not a sanitizer — see htmlSanitizer.ts. */
 function stripHtml(text: string): string {
   return text.replace(/<[^>]*>?/gm, '');
 }

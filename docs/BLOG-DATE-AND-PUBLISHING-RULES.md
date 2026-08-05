@@ -2,11 +2,11 @@
 
 Scope: `backend/api/blog/*.php`, `backend/helpers/Blog.php`, `blog_posts`
 schema. This is the current, live PHP+MySQL CMS backend — not the older
-Markdown/static-site architecture described in
-`docs/BLOG-PUBLISHING-WORKFLOW.md` (superseded; see
-`docs/11A-BLOG-IMPLEMENTATION-AUDIT.md` §0 for that history). Nothing here
-requires a rebuild or redeploy to take effect — every request re-evaluates
-publishing state against the current server time.
+Markdown/static-site architecture (removed; see
+`docs/BLOG-MIGRATION-INVENTORY.md` and `docs/11A-BLOG-IMPLEMENTATION-AUDIT.md`
+§0 for that history). Nothing here requires a rebuild or redeploy to take
+effect — every request re-evaluates publishing state against the current
+server time.
 
 ## Server timezone
 
