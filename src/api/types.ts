@@ -76,7 +76,7 @@ export interface BlogPost {
   author: string | null;
   author_id: number;
   category: string | null;
-  tags: string[];
+  category_id: number;
   featured: boolean;
   draft: boolean;
   seo_title: string | null;
@@ -94,7 +94,6 @@ export interface ListBlogPostsParams {
   /** Substring match against title/description/content. */
   search?: string;
   category?: string;
-  tag?: string;
   featured?: boolean;
   /** Only honored for an authenticated admin; anonymous callers always get published-only results. */
   draft?: boolean;
@@ -109,7 +108,7 @@ export interface ListBlogPostsResult {
 
 /** Shape produced by `backend/api/blog/related.php`. */
 export interface RelatedPostsResult {
-  /** Up to a small fixed number, ranked by category match then shared tags then recency. Empty when nothing qualifies. */
+  /** Up to a small fixed number, restricted to the same category, ranked by recency. Empty when nothing qualifies. */
   related: BlogPost[];
   /** Next-older public post in publication order, or null if this is the first. */
   previous: BlogPost | null;
@@ -126,8 +125,7 @@ export interface CreateBlogPostInput {
   cover_image?: string | null;
   cover_image_alt?: string | null;
   author?: string | number;
-  category?: string;
-  tags?: string[];
+  category_id: number;
   featured?: boolean;
   draft?: boolean;
   seo_title?: string | null;
@@ -149,14 +147,13 @@ export interface UploadResult {
   height: number | null;
 }
 
+/** Shape produced by `backend/helpers/Taxonomy.php::taxonomy_format`. */
 export interface Category {
   id: number;
   name: string;
   slug: string;
-}
-
-export interface Tag {
-  id: number;
-  name: string;
-  slug: string;
+  description: string | null;
+  created_at: string;
+  /** Number of blog_posts currently assigned to this category. */
+  post_count: number;
 }

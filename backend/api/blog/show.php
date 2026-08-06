@@ -51,9 +51,7 @@ try {
 
     blog_backfill_published_at($pdo, $row);
 
-    $tags = blog_fetch_tags($pdo, (int) $row['id']);
-
-    json_response(200, ['data' => blog_format_post($row, $tags)]);
+    json_response(200, ['data' => blog_format_post($row)]);
 } catch (Throwable $e) {
     error_log('[blog/show] ' . $e->getMessage());
     json_response(500, ['error' => 'Something went wrong. Please try again.']);

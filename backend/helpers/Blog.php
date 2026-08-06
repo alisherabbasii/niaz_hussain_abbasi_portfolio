@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 /**
  * Shared logic for backend/api/blog/*.php: slug handling, resolving the
- * free-text author/category/tags fields the blog CRUD API exposes onto the
- * relational admins/categories/tags tables the schema actually stores them
- * in, and formatting a blog_posts row (plus its joins) into the API's JSON
- * shape.
+ * free-text author field (and the required category_id) the blog CRUD API
+ * exposes onto the relational admins/categories tables the schema actually
+ * stores them in, and formatting a blog_posts row (plus its joins) into the
+ * API's JSON shape.
  */
 
 const BLOG_SLUG_PATTERN = '/^[a-z0-9]+(?:-[a-z0-9]+)*$/';
@@ -77,39 +77,34 @@ function blog_unique_table_slug(PDO $pdo, string $table, string $base): string
 }
 
 /**
- * Resolve a free-text category name to a categories.id, creating the
- * category if it doesn't exist yet. Returns null for an empty/absent name.
+ * Resolve the required "category_id" request field to a categories.id.
+ * Categories are managed exclusively through backend/api/categories/*.php —
+ * unlike the old free-text category field, this never creates one; it only
+ * validates that the given id refers to an existing category.
  *
- * @throws InvalidArgumentException if the name has no usable characters.
+ * @throws InvalidArgumentException if $categoryIdInput isn't a positive
+ *         integer (or numeric string) referencing an existing category.
  */
-function blog_resolve_category_id(PDO $pdo, ?string $categoryName): ?int
+function blog_resolve_required_category_id(PDO $pdo, mixed $categoryIdInput): int
 {
-    $name = trim((string) $categoryName);
-
-    if ($name === '') {
-        return null;
+    if (!is_int($categoryIdInput) && !(is_string($categoryIdInput) && ctype_digit($categoryIdInput))) {
+        throw new InvalidArgumentException('category_id is required and must be a valid category id.');
     }
 
-    $stmt = $pdo->prepare('SELECT id FROM categories WHERE name = :name LIMIT 1');
-    $stmt->execute(['name' => $name]);
-    $row = $stmt->fetch();
+    $id = (int) $categoryIdInput;
 
-    if ($row !== false) {
-        return (int) $row['id'];
+    if ($id <= 0) {
+        throw new InvalidArgumentException('category_id is required and must be a valid category id.');
     }
 
-    $slug = blog_slugify($name);
+    $stmt = $pdo->prepare('SELECT id FROM categories WHERE id = :id LIMIT 1');
+    $stmt->execute(['id' => $id]);
 
-    if ($slug === '') {
-        throw new InvalidArgumentException('Category must contain at least one letter or number.');
+    if ($stmt->fetch() === false) {
+        throw new InvalidArgumentException("No category found with id {$id}.");
     }
 
-    $slug = blog_unique_table_slug($pdo, 'categories', $slug);
-
-    $insert = $pdo->prepare('INSERT INTO categories (name, slug) VALUES (:name, :slug)');
-    $insert->execute(['name' => $name, 'slug' => $slug]);
-
-    return (int) $pdo->lastInsertId();
+    return $id;
 }
 
 /**
@@ -156,72 +151,6 @@ function blog_resolve_author_id(PDO $pdo, mixed $authorInput, int $fallbackAdmin
     }
 
     throw new InvalidArgumentException('author must be a string or an integer id.');
-}
-
-/**
- * Replace a post's tag set with $tagNames: find-or-create each tag, then
- * overwrite blog_post_tags for that post. Names are deduplicated
- * case-insensitively; blank entries are dropped.
- */
-function blog_sync_tags(PDO $pdo, int $postId, array $tagNames): void
-{
-    $normalized = [];
-
-    foreach ($tagNames as $tagName) {
-        if (!is_string($tagName)) {
-            continue;
-        }
-
-        $trimmed = trim($tagName);
-
-        if ($trimmed === '') {
-            continue;
-        }
-
-        $normalized[strtolower($trimmed)] = $trimmed;
-    }
-
-    $tagIds = [];
-
-    foreach ($normalized as $name) {
-        $stmt = $pdo->prepare('SELECT id FROM tags WHERE name = :name LIMIT 1');
-        $stmt->execute(['name' => $name]);
-        $row = $stmt->fetch();
-
-        if ($row !== false) {
-            $tagIds[] = (int) $row['id'];
-            continue;
-        }
-
-        $slug = blog_unique_table_slug($pdo, 'tags', blog_slugify($name));
-
-        $insert = $pdo->prepare('INSERT INTO tags (name, slug) VALUES (:name, :slug)');
-        $insert->execute(['name' => $name, 'slug' => $slug]);
-        $tagIds[] = (int) $pdo->lastInsertId();
-    }
-
-    $pdo->prepare('DELETE FROM blog_post_tags WHERE post_id = :post_id')->execute(['post_id' => $postId]);
-
-    if ($tagIds !== []) {
-        $insert = $pdo->prepare('INSERT INTO blog_post_tags (post_id, tag_id) VALUES (:post_id, :tag_id)');
-        foreach ($tagIds as $tagId) {
-            $insert->execute(['post_id' => $postId, 'tag_id' => $tagId]);
-        }
-    }
-}
-
-/** Tag names attached to a post, alphabetically sorted. */
-function blog_fetch_tags(PDO $pdo, int $postId): array
-{
-    $stmt = $pdo->prepare(
-        'SELECT t.name FROM tags t
-         INNER JOIN blog_post_tags bpt ON bpt.tag_id = t.id
-         WHERE bpt.post_id = :post_id
-         ORDER BY t.name ASC'
-    );
-    $stmt->execute(['post_id' => $postId]);
-
-    return array_column($stmt->fetchAll(), 'name');
 }
 
 /**
@@ -443,8 +372,8 @@ function blog_fetch_adjacent_public_post(PDO $pdo, int $excludeId, ?string $publ
     return $row === false ? null : $row;
 }
 
-/** Format one blog_posts row (from blog_select_base()) plus its tags into the API's JSON shape. */
-function blog_format_post(array $row, array $tags): array
+/** Format one blog_posts row (from blog_select_base()) into the API's JSON shape. */
+function blog_format_post(array $row): array
 {
     return [
         'id' => (int) $row['id'],
@@ -457,7 +386,7 @@ function blog_format_post(array $row, array $tags): array
         'author' => $row['author_name'],
         'author_id' => (int) $row['author_id'],
         'category' => $row['category_name'],
-        'tags' => $tags,
+        'category_id' => (int) $row['category_id'],
         'featured' => (bool) $row['featured'],
         'draft' => $row['status'] === 'draft',
         'seo_title' => $row['seo_title'],

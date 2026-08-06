@@ -18,7 +18,6 @@ export interface BlogPost {
   updatedAt: string | null;
   author: string;
   category: string;
-  tags: string[];
   coverImage: string | null;
   coverImageAlt: string;
   featured: boolean;

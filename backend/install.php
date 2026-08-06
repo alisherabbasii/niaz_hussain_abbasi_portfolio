@@ -128,7 +128,7 @@ try {
         );
         $insert->execute([
             'version' => $version,
-            'description' => 'Initial schema: admins, blog_posts, categories, tags, blog_post_tags, uploads, settings',
+            'description' => 'Initial schema: admins, blog_posts, categories, uploads, settings',
         ]);
         installer_log("      Recorded migration '{$version}'.");
     } else {

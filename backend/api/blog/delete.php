@@ -15,7 +15,6 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
  * `id` may be given as a query param or in a JSON body.
  * Requires an authenticated admin session + CSRF header. 'editor' callers
  * may only delete posts they authored.
- * blog_post_tags rows for the post are cascade-deleted by the schema's FK.
  */
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'DELETE') {

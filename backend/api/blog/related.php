@@ -21,14 +21,13 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
  * published, and not scheduled for the future — regardless of whether the
  * current article itself is a draft an admin is previewing.
  *
- * Related posts are ranked same-category first, then by number of shared
- * tags, then by most recent; a candidate sharing neither is excluded
- * entirely rather than padded in as an unrelated "recent post" (an empty
- * `related` array is a valid, expected response). This is computed with a
- * single ranked SQL query and previous/next with one indexed lookup each
- * (see blog_fetch_adjacent_public_post), rather than fetching every post
- * and ranking client-side, so the cost doesn't grow with the size of the
- * blog.
+ * Related posts are ranked same-category first, then by most recent; a
+ * candidate outside the current post's category is excluded entirely rather
+ * than padded in as an unrelated "recent post" (an empty `related` array is
+ * a valid, expected response). This is computed with a single ranked SQL
+ * query and previous/next with one indexed lookup each (see
+ * blog_fetch_adjacent_public_post), rather than fetching every post and
+ * ranking client-side, so the cost doesn't grow with the size of the blog.
  */
 
 const RELATED_POSTS_LIMIT = 3;
@@ -66,50 +65,21 @@ try {
     }
 
     $currentId = (int) $current['id'];
-    $categoryId = $current['category_id'] !== null ? (int) $current['category_id'] : null;
-    $tags = blog_fetch_tags($pdo, $currentId);
+    $categoryId = (int) $current['category_id'];
     $visible = blog_public_visibility_sql();
 
     // --- Related posts -----------------------------------------------
-    // Real (non-emulated) prepared statements can't reuse one named
-    // placeholder more than once per query (see the same pattern in
-    // backend/helpers/Blog.php's blog_resolve_author_id), so the tag names
-    // each get their own numbered placeholder.
-    $tagParams = [];
-    $tagPlaceholders = [];
-    foreach (array_values($tags) as $i => $tagName) {
-        $key = "tag{$i}";
-        $tagPlaceholders[] = ":{$key}";
-        $tagParams[$key] = $tagName;
-    }
-
-    $sharedTagExpr = $tagPlaceholders !== []
-        ? 'COUNT(DISTINCT CASE WHEN t.name IN (' . implode(', ', $tagPlaceholders) . ') THEN t.id END)'
-        : '0';
-    $categoryMatchExpr = $categoryId !== null ? '(bp.category_id = :category_id)' : '0';
-
-    $relatedSql = "SELECT bp.*, a.full_name AS author_name, c.name AS category_name,
-                {$categoryMatchExpr} AS category_match,
-                {$sharedTagExpr} AS shared_tag_count
+    $relatedSql = "SELECT bp.*, a.full_name AS author_name, c.name AS category_name
              FROM blog_posts bp
              LEFT JOIN admins a ON a.id = bp.author_id
              LEFT JOIN categories c ON c.id = bp.category_id
-             LEFT JOIN blog_post_tags bpt ON bpt.post_id = bp.id
-             LEFT JOIN tags t ON t.id = bpt.tag_id
-             WHERE bp.id != :current_id AND {$visible}
-             GROUP BY bp.id
-             HAVING category_match = 1 OR shared_tag_count > 0
-             ORDER BY category_match DESC, shared_tag_count DESC, bp.publish_at DESC, bp.id DESC
+             WHERE bp.id != :current_id AND bp.category_id = :category_id AND {$visible}
+             ORDER BY bp.publish_at DESC, bp.id DESC
              LIMIT :limit";
 
     $relatedStmt = $pdo->prepare($relatedSql);
     $relatedStmt->bindValue('current_id', $currentId, PDO::PARAM_INT);
-    if ($categoryId !== null) {
-        $relatedStmt->bindValue('category_id', $categoryId, PDO::PARAM_INT);
-    }
-    foreach ($tagParams as $key => $value) {
-        $relatedStmt->bindValue($key, $value, PDO::PARAM_STR);
-    }
+    $relatedStmt->bindValue('category_id', $categoryId, PDO::PARAM_INT);
     $relatedStmt->bindValue('now', date('Y-m-d H:i:s'));
     $relatedStmt->bindValue('limit', RELATED_POSTS_LIMIT, PDO::PARAM_INT);
     $relatedStmt->execute();
@@ -118,7 +88,7 @@ try {
     $related = array_map(
         static function (array $row) use ($pdo): array {
             blog_backfill_published_at($pdo, $row);
-            return blog_format_post($row, blog_fetch_tags($pdo, (int) $row['id']));
+            return blog_format_post($row);
         },
         $relatedRows
     );
@@ -132,7 +102,7 @@ try {
             return null;
         }
         blog_backfill_published_at($pdo, $row);
-        return blog_format_post($row, blog_fetch_tags($pdo, (int) $row['id']));
+        return blog_format_post($row);
     };
 
     json_response(200, [

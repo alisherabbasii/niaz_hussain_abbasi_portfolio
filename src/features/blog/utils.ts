@@ -120,10 +120,6 @@ export function filterByCategory(posts: BlogPost[], category: string): BlogPost[
   return posts.filter((post) => post.category === category);
 }
 
-export function filterByTag(posts: BlogPost[], tag: string): BlogPost[] {
-  return posts.filter((post) => post.tags.includes(tag));
-}
-
 /**
  * Adapts a `backend/api/blog/*` response (see `src/api/types.ts`) into the
  * normalized `BlogPost` shape the display components in `components/blog`
@@ -144,12 +140,11 @@ export function toDisplayPost(apiPost: ApiBlogPost): BlogPost {
     updatedAt: apiPost.updated_at !== apiPost.created_at ? apiPost.updated_at : null,
     author: apiPost.author ?? '',
     category: apiPost.category ?? '',
-    tags: apiPost.tags,
     coverImage: apiPost.cover_image ?? null,
     coverImageAlt: apiPost.cover_image_alt ?? '',
     featured: apiPost.featured,
     draft: apiPost.draft,
-    keywords: apiPost.tags,
+    keywords: apiPost.category ? [apiPost.category] : [],
     readingTimeMinutes: calculateReadingTimeMinutes(apiPost.content),
   };
 }

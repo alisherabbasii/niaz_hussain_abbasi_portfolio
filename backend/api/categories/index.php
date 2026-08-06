@@ -10,10 +10,11 @@ require_once __DIR__ . '/../../middleware/CsrfMiddleware.php';
 
 /**
  * GET /api/categories/index.php
- * Public read: every category, alphabetically by name. Category names/slugs
- * are already exposed via published posts (blog/index.php, blog/show.php),
- * so listing them on their own adds no new exposure and lets the public
- * blog pages build a category filter without authenticating.
+ * Public read: every category, alphabetically by name, with its assigned
+ * post count. Category names/slugs are already exposed via published posts
+ * (blog/index.php, blog/show.php), so listing them on their own adds no new
+ * exposure and lets both the public blog pages and the admin Category
+ * management UI build off one endpoint.
  */
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
@@ -26,9 +27,22 @@ csrf_ensure_token();
 try {
     $pdo = Database::getConnection();
 
-    $rows = $pdo->query('SELECT id, name, slug FROM categories ORDER BY name ASC')->fetchAll();
+    // Single query with the post count joined in, rather than one
+    // taxonomy_category_post_count() call per row.
+    $rows = $pdo->query(
+        'SELECT c.id, c.name, c.slug, c.description, c.created_at, COUNT(bp.id) AS post_count
+         FROM categories c
+         LEFT JOIN blog_posts bp ON bp.category_id = c.id
+         GROUP BY c.id
+         ORDER BY c.name ASC'
+    )->fetchAll();
 
-    json_response(200, ['data' => array_map('taxonomy_format', $rows)]);
+    $data = array_map(
+        static fn (array $row): array => taxonomy_format($row, (int) $row['post_count']),
+        $rows
+    );
+
+    json_response(200, ['data' => $data]);
 } catch (Throwable $e) {
     error_log('[categories/index] ' . $e->getMessage());
     json_response(500, ['error' => 'Something went wrong. Please try again.']);

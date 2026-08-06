@@ -23,8 +23,8 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
  *   cover_image_alt?: string|null,
  *   author?: string|int (admin id, name, or email; defaults to the caller;
  *              an 'editor' caller may only author as themselves),
- *   category?: string (found-or-created by name),
- *   tags?: string[] (each found-or-created by name),
+ *   category_id: int (required; must reference an existing category —
+ *              see backend/api/categories/*.php),
  *   featured? / is_featured?: bool,
  *   draft?: bool (default true) / status?: 'draft'|'published',
  *   seo_title?: string|null,
@@ -119,6 +119,10 @@ if ($seoDescription !== null && blog_strlen($seoDescription) > 400) {
 
 $featured = filter_var(blog_body_get($body, 'featured', 'is_featured') ?? false, FILTER_VALIDATE_BOOLEAN);
 
+if (!array_key_exists('category_id', $body)) {
+    json_response(422, ['error' => 'category_id is required']);
+}
+
 $draft = true;
 if (blog_body_has($body, 'status')) {
     $status = is_string($body['status']) ? trim($body['status']) : '';
@@ -130,14 +134,6 @@ if (blog_body_has($body, 'status')) {
     $draft = filter_var($body['draft'], FILTER_VALIDATE_BOOLEAN);
 }
 $status = $draft ? 'draft' : 'published';
-
-$tags = [];
-if (array_key_exists('tags', $body)) {
-    if (!is_array($body['tags'])) {
-        json_response(422, ['error' => 'tags must be an array of strings']);
-    }
-    $tags = $body['tags'];
-}
 
 try {
     $pdo = Database::getConnection();
@@ -173,7 +169,7 @@ try {
     $pdo->beginTransaction();
 
     try {
-        $categoryId = blog_resolve_category_id($pdo, is_string($body['category'] ?? null) ? $body['category'] : null);
+        $categoryId = blog_resolve_required_category_id($pdo, $body['category_id']);
 
         $insert = $pdo->prepare(
             'INSERT INTO blog_posts
@@ -204,8 +200,6 @@ try {
 
         $postId = (int) $pdo->lastInsertId();
 
-        blog_sync_tags($pdo, $postId, $tags);
-
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
@@ -225,7 +219,7 @@ try {
     $stmt->execute(['id' => $postId]);
     $row = $stmt->fetch();
 
-    json_response(201, ['data' => blog_format_post($row, blog_fetch_tags($pdo, $postId))]);
+    json_response(201, ['data' => blog_format_post($row)]);
 } catch (Throwable $e) {
     error_log('[blog/create] ' . $e->getMessage());
     json_response(500, ['error' => 'Something went wrong. Please try again.']);

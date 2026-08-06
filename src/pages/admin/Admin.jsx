@@ -9,6 +9,8 @@ import AdminLayout from './AdminLayout';
 import AdminDashboard from './AdminDashboard';
 import PostList from './posts/PostList';
 import PostForm from './posts/PostForm';
+import CategoriesList from './categories/CategoriesList';
+import CategoryForm from './categories/CategoryForm';
 import UsersList from './users/UsersList';
 import UserForm from './users/UserForm';
 import Profile from './Profile';
@@ -40,6 +42,9 @@ export default function Admin() {
             <Route path="blogs" element={<PostList />} />
             <Route path="blogs/new" element={<PostForm />} />
             <Route path="blogs/:id/edit" element={<PostForm />} />
+            <Route path="categories" element={<CategoriesList />} />
+            <Route path="categories/new" element={<CategoryForm />} />
+            <Route path="categories/:id/edit" element={<CategoryForm />} />
             <Route path="profile" element={<Profile />} />
             <Route path="forbidden" element={<Forbidden />} />
             {/* Reachable by any authenticated admin, but only super_admin passes the

@@ -15,7 +15,7 @@ declare(strict_types=1);
  *   (BASE_URL env var overrides the default http://127.0.0.1:8987)
  *
  * Exits 0 if every assertion passed, 1 otherwise. Cleans up every blog post
- * (and their category/tag rows) it creates.
+ * and test category it creates.
  */
 
 require_once __DIR__ . '/../config/env.php';
@@ -124,10 +124,16 @@ $superAdminPassword = env_get('INSTALL_ADMIN_PASSWORD', required: true);
 $pdo = Database::getConnection();
 
 $createdPostIds = [];
+$createdCategoryIds = [];
 
-register_shutdown_function(function () use (&$createdPostIds, $pdo): void {
+register_shutdown_function(function () use (&$createdPostIds, &$createdCategoryIds, $pdo): void {
+    // Posts first: categories can't be deleted (FK ON DELETE RESTRICT) while
+    // any post still references them.
     foreach ($createdPostIds as $id) {
         $pdo->prepare('DELETE FROM blog_posts WHERE id = :id')->execute(['id' => $id]);
+    }
+    foreach ($createdCategoryIds as $id) {
+        $pdo->prepare('DELETE FROM categories WHERE id = :id')->execute(['id' => $id]);
     }
 });
 
@@ -161,14 +167,15 @@ function createPost(TestClient $client, array &$createdPostIds, array $overrides
 }
 
 // Publication order (oldest -> newest):
-//   oldest -> A (Leadership, tags: grit)
-//             B (Community,  tags: grit, faith)   <- shares tag with A
-//             C (Leadership, tags: none)           <- shares category with A/B's category set
-//             D (Solo,       tags: none)           <- shares nothing with anyone (isolated)
-//   newest -> E (Community,  tags: faith)          <- shares tag with B
+//   oldest -> A (Leadership)
+//             B (Community)
+//             C (Leadership)  <- shares category with A
+//             D (Solo)        <- shares nothing with anyone (isolated)
+//   newest -> E (Community)   <- shares category with B
 //
-// D is the "no relationships" case: distinct category, no tags, and no
-// other post shares its category, so related must come back empty for it.
+// Relatedness is category-only now (see backend/api/blog/related.php): D is
+// the "no relationships" case — its category has no other member, so
+// related must come back empty for it.
 //
 // Each fixture gets an explicit, far-past `publish_at` (rather than relying
 // on wall-clock "now") so ordering is deterministic and A is unambiguously
@@ -182,9 +189,23 @@ function fixtureTimestamp(int $base, int $offsetSeconds): string
     return date('Y-m-d H:i:s', $base + $offsetSeconds);
 }
 
-$categoryLeadership = "Related Test Leadership {$suffix}";
-$categoryCommunity = "Related Test Community {$suffix}";
-$categorySolo = "Related Test Solo {$suffix}";
+/** Create a category via the real API and return its id, failing loudly on a non-201. */
+function createCategory(TestClient $client, array &$createdCategoryIds, string $name): int
+{
+    $resp = $client->post('/api/categories/create.php', ['name' => $name]);
+    if ($resp['status'] !== 201) {
+        fwrite(STDERR, "Failed to create fixture category: {$resp['raw']}\n");
+        exit(1);
+    }
+    $id = (int) $resp['json']['data']['id'];
+    $createdCategoryIds[] = $id;
+    return $id;
+}
+
+$categoryLeadershipId = createCategory($super, $createdCategoryIds, "Related Test Leadership {$suffix}");
+$categoryCommunityId = createCategory($super, $createdCategoryIds, "Related Test Community {$suffix}");
+$categorySoloId = createCategory($super, $createdCategoryIds, "Related Test Solo {$suffix}");
+$categoryLonelyId = createCategory($super, $createdCategoryIds, "Related Test Lonely {$suffix}");
 
 echo "\n== Fixtures ==\n";
 
@@ -194,8 +215,7 @@ $postA = createPost($super, $createdPostIds, [
     'content' => '<p>A</p>',
     'status' => 'published',
     'publish_at' => fixtureTimestamp($basePublishAt, 0),
-    'category' => $categoryLeadership,
-    'tags' => ['grit'],
+    'category_id' => $categoryLeadershipId,
 ]);
 
 $postB = createPost($super, $createdPostIds, [
@@ -204,8 +224,7 @@ $postB = createPost($super, $createdPostIds, [
     'content' => '<p>B</p>',
     'status' => 'published',
     'publish_at' => fixtureTimestamp($basePublishAt, 10),
-    'category' => $categoryCommunity,
-    'tags' => ['grit', 'faith'],
+    'category_id' => $categoryCommunityId,
 ]);
 
 $postC = createPost($super, $createdPostIds, [
@@ -214,8 +233,7 @@ $postC = createPost($super, $createdPostIds, [
     'content' => '<p>C</p>',
     'status' => 'published',
     'publish_at' => fixtureTimestamp($basePublishAt, 20),
-    'category' => $categoryLeadership,
-    'tags' => [],
+    'category_id' => $categoryLeadershipId,
 ]);
 
 $postD = createPost($super, $createdPostIds, [
@@ -224,8 +242,7 @@ $postD = createPost($super, $createdPostIds, [
     'content' => '<p>D</p>',
     'status' => 'published',
     'publish_at' => fixtureTimestamp($basePublishAt, 30),
-    'category' => $categorySolo,
-    'tags' => [],
+    'category_id' => $categorySoloId,
 ]);
 
 $postE = createPost($super, $createdPostIds, [
@@ -234,8 +251,7 @@ $postE = createPost($super, $createdPostIds, [
     'content' => '<p>E</p>',
     'status' => 'published',
     'publish_at' => fixtureTimestamp($basePublishAt, 40),
-    'category' => $categoryCommunity,
-    'tags' => ['faith'],
+    'category_id' => $categoryCommunityId,
 ]);
 
 $draftPost = createPost($super, $createdPostIds, [
@@ -243,8 +259,7 @@ $draftPost = createPost($super, $createdPostIds, [
     'slug' => "related-test-draft-{$suffix}",
     'content' => '<p>Draft</p>',
     'status' => 'draft',
-    'category' => $categoryLeadership,
-    'tags' => ['grit'],
+    'category_id' => $categoryLeadershipId,
 ]);
 
 $futureDate = date('Y-m-d H:i:s', strtotime('+1 year'));
@@ -254,8 +269,7 @@ $futurePost = createPost($super, $createdPostIds, [
     'content' => '<p>Future</p>',
     'status' => 'published',
     'publish_at' => $futureDate,
-    'category' => $categoryLeadership,
-    'tags' => ['grit'],
+    'category_id' => $categoryLeadershipId,
 ]);
 
 // A deliberately unrelated post published at "now" (no explicit publish_at
@@ -272,8 +286,7 @@ $lastPost = createPost($super, $createdPostIds, [
     'slug' => "related-test-last-{$suffix}",
     'content' => '<p>Last</p>',
     'status' => 'published',
-    'category' => "Related Test Lonely {$suffix}",
-    'tags' => [],
+    'category_id' => $categoryLonelyId,
 ]);
 
 echo "\n== Same category ==\n";
@@ -282,38 +295,28 @@ $relA = $anon->get('/api/blog/related.php?id=' . $postA['id']);
 report($relA['status'] === 200, 'GET related.php?id=A -> 200', (string) $relA['status']);
 $relASlugs = array_column($relA['json']['data']['related'] ?? [], 'slug');
 report(in_array($postC['slug'], $relASlugs, true), 'A relates to C via shared category (Leadership)');
-report(in_array($postB['slug'], $relASlugs, true), 'A relates to B via shared tag (grit)');
+report(!in_array($postB['slug'], $relASlugs, true), 'A does not relate to B (different category: Community)');
 report(!in_array($postA['slug'], $relASlugs, true), 'related list excludes the source post itself');
-report(!in_array($draftPost['slug'], $relASlugs, true), 'related list excludes a draft even though it matches category+tag');
-report(!in_array($futurePost['slug'], $relASlugs, true), 'related list excludes a future-scheduled post even though it matches category+tag');
+report(!in_array($draftPost['slug'], $relASlugs, true), 'related list excludes a draft even though it matches category');
+report(!in_array($futurePost['slug'], $relASlugs, true), 'related list excludes a future-scheduled post even though it matches category');
 
 $relAIds = array_column($relA['json']['data']['related'] ?? [], 'id');
 report(count($relAIds) === count(array_unique($relAIds)), 'related list has no duplicate posts');
 report(count($relAIds) <= 3, 'related list respects the small fixed limit (<= 3)', (string) count($relAIds));
 
-// C matches A purely by category (no tags); confirm the category-match path
-// independently of B's tag overlap.
-$categoryMatchOnly = null;
-foreach ($relA['json']['data']['related'] ?? [] as $candidate) {
-    if ($candidate['slug'] === $postC['slug']) {
-        $categoryMatchOnly = $candidate;
-    }
-}
-report($categoryMatchOnly !== null, 'category-only match (C, no shared tags with A) is present in A\'s related list');
-
-echo "\n== Shared tags ==\n";
+echo "\n== Same category (B) ==\n";
 
 $relB = $anon->get('/api/blog/related.php?id=' . $postB['id']);
 $relBSlugs = array_column($relB['json']['data']['related'] ?? [], 'slug');
-report(in_array($postA['slug'], $relBSlugs, true), 'B relates to A via shared tag (grit)');
-report(in_array($postE['slug'], $relBSlugs, true), 'B relates to E via shared tag (faith) and shared category (Community)');
-report(!in_array($postC['slug'], $relBSlugs, true), 'B does not relate to C (different category, no shared tags)');
+report(in_array($postE['slug'], $relBSlugs, true), 'B relates to E via shared category (Community)');
+report(!in_array($postA['slug'], $relBSlugs, true), 'B does not relate to A (different category: Leadership)');
+report(!in_array($postC['slug'], $relBSlugs, true), 'B does not relate to C (different category: Leadership)');
 
 echo "\n== No relationships ==\n";
 
 $relD = $anon->get('/api/blog/related.php?id=' . $postD['id']);
 report($relD['status'] === 200, 'GET related.php?id=D -> 200', (string) $relD['status']);
-report(($relD['json']['data']['related'] ?? null) === [], 'post with no shared category/tags gets a graceful empty related list, not unrelated filler');
+report(($relD['json']['data']['related'] ?? null) === [], 'post with no other posts sharing its category gets a graceful empty related list, not unrelated filler');
 
 echo "\n== Previous / next: first and last post ==\n";
 

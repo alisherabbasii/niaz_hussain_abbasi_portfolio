@@ -40,8 +40,8 @@ export async function getPostBySlug(slug: string): Promise<BlogPost> {
 }
 
 /**
- * GET /api/blog/related.php?slug=… — related posts (by category/shared tags)
- * plus the previous/next post in publication order, for a given article.
+ * GET /api/blog/related.php?slug=… — related posts (same category) plus
+ * the previous/next post in publication order, for a given article.
  * Computed server-side with targeted queries, so this doesn't require
  * paging through every post in the blog to answer.
  */

@@ -39,19 +39,12 @@ CREATE TABLE IF NOT EXISTS admins (
   INDEX idx_admins_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Categories (first-class, one per post).
+-- Categories (first-class, exactly one per post — see fk_posts_category).
 CREATE TABLE IF NOT EXISTS categories (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name        VARCHAR(100) NOT NULL UNIQUE,
   slug        VARCHAR(120) NOT NULL UNIQUE,
-  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tags (first-class, many-to-many with posts via blog_post_tags).
-CREATE TABLE IF NOT EXISTS tags (
-  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name        VARCHAR(60)  NOT NULL UNIQUE,
-  slug        VARCHAR(80)  NOT NULL UNIQUE,
+  description TEXT         NULL,
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -68,7 +61,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   content           LONGTEXT      NOT NULL,
   cover_image_path  VARCHAR(500)  NULL,
   cover_image_alt   VARCHAR(300)  NULL,
-  category_id       INT UNSIGNED  NULL,
+  category_id       INT UNSIGNED  NOT NULL,
   author_id         INT UNSIGNED  NOT NULL,
   status            ENUM('draft','published') NOT NULL DEFAULT 'draft',
   featured          TINYINT(1)    NOT NULL DEFAULT 0,
@@ -79,7 +72,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   created_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  CONSTRAINT fk_posts_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+  CONSTRAINT fk_posts_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT,
   CONSTRAINT fk_posts_author   FOREIGN KEY (author_id)   REFERENCES admins(id)     ON DELETE RESTRICT,
 
   INDEX idx_posts_status_published (status, published_at),
@@ -87,15 +80,6 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   INDEX idx_posts_featured (featured, status, published_at),
   INDEX idx_posts_category (category_id),
   FULLTEXT INDEX ft_posts_search (title, description, content)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Post <-> Tag (many-to-many).
-CREATE TABLE IF NOT EXISTS blog_post_tags (
-  post_id  INT UNSIGNED NOT NULL,
-  tag_id   INT UNSIGNED NOT NULL,
-  PRIMARY KEY (post_id, tag_id),
-  CONSTRAINT fk_bpt_post FOREIGN KEY (post_id) REFERENCES blog_posts(id) ON DELETE CASCADE,
-  CONSTRAINT fk_bpt_tag  FOREIGN KEY (tag_id)  REFERENCES tags(id)       ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Uploaded media (cover images + in-editor images).

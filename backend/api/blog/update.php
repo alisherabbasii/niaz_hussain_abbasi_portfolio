@@ -16,8 +16,9 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
  * Body: any subset of the fields accepted by create.php (including its
  * short_description/is_featured/status/publish_at aliases). Fields omitted
  * from the body are left unchanged; a field explicitly set to null clears
- * it where the column is nullable (category, cover_image, cover_image_alt,
- * seo_title, seo_description).
+ * it where the column is nullable (cover_image, cover_image_alt, seo_title,
+ * seo_description). category_id, if present, must reference an existing
+ * category — it can never be cleared to null (every post must have one).
  *
  * `id` may be given as a query param or in the JSON body. Requires an
  * authenticated admin session + CSRF header. 'editor' callers may only
@@ -171,15 +172,6 @@ try {
         $existing['published_at']
     );
 
-    $tagsProvided = array_key_exists('tags', $body);
-    $tags = [];
-    if ($tagsProvided) {
-        if (!is_array($body['tags'])) {
-            json_response(422, ['error' => 'tags must be an array of strings']);
-        }
-        $tags = $body['tags'];
-    }
-
     if (blog_slug_exists($pdo, $slug, $id)) {
         json_response(409, ['error' => "slug \"{$slug}\" is already in use"]);
     }
@@ -199,9 +191,9 @@ try {
     $pdo->beginTransaction();
 
     try {
-        $categoryId = $existing['category_id'] !== null ? (int) $existing['category_id'] : null;
-        if (array_key_exists('category', $body)) {
-            $categoryId = blog_resolve_category_id($pdo, is_string($body['category']) ? $body['category'] : null);
+        $categoryId = (int) $existing['category_id'];
+        if (array_key_exists('category_id', $body)) {
+            $categoryId = blog_resolve_required_category_id($pdo, $body['category_id']);
         }
 
         $update = $pdo->prepare(
@@ -240,10 +232,6 @@ try {
             'id' => $id,
         ]);
 
-        if ($tagsProvided) {
-            blog_sync_tags($pdo, $id, $tags);
-        }
-
         $pdo->commit();
     } catch (Throwable $e) {
         $pdo->rollBack();
@@ -263,7 +251,7 @@ try {
     $stmt->execute(['id' => $id]);
     $row = $stmt->fetch();
 
-    json_response(200, ['data' => blog_format_post($row, blog_fetch_tags($pdo, $id))]);
+    json_response(200, ['data' => blog_format_post($row)]);
 } catch (Throwable $e) {
     error_log('[blog/update] ' . $e->getMessage());
     json_response(500, ['error' => 'Something went wrong. Please try again.']);

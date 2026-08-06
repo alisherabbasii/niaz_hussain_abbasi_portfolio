@@ -1,6 +1,6 @@
 import { Calendar, Clock, User } from 'lucide-react';
 import { Modal, Badge } from '../../../components/ui';
-import { CategoryBadge, TagList, HtmlContent } from '../../../components/blog';
+import { CategoryBadge, HtmlContent } from '../../../components/blog';
 import { ARTICLE_PROSE_CLASSES } from '../../../components/blog/articleProseClasses';
 import { formatDate, formatReadingTime, calculateReadingTimeMinutes } from '../../../features/blog/utils';
 
@@ -52,8 +52,6 @@ const PostPreviewModal = ({ post, onClose }) => {
       )}
 
       <HtmlContent content={post.content} className={ARTICLE_PROSE_CLASSES} />
-
-      {post.tags.length > 0 && <TagList tags={post.tags} className="mt-6" />}
     </Modal>
   );
 };

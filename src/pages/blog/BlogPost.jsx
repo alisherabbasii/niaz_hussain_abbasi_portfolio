@@ -9,7 +9,6 @@ import {
   HtmlContent,
   ShareButtons,
   TableOfContents,
-  TagList,
 } from '../../components/blog';
 import { ARTICLE_PROSE_CLASSES } from '../../components/blog/articleProseClasses';
 import { getPostBySlug, getRelatedPosts } from '../../api/blogService';
@@ -239,7 +238,7 @@ const BlogPost = () => {
 
         <header className="mb-10">
           <div className="mb-5 flex items-center gap-2">
-            <CategoryBadge category={post.category} />
+            <CategoryBadge category={post.category} to={`/blog?category=${encodeURIComponent(post.category)}`} />
             {post.draft && (
               <Badge variant="warning" size="sm">
                 Draft — dev preview only, not on the live site
@@ -279,12 +278,6 @@ const BlogPost = () => {
         {showToc && <TableOfContents />}
 
         <HtmlContent content={post.content} className={ARTICLE_PROSE_CLASSES} />
-
-        {post.tags.length > 0 && (
-          <div className="mt-2 mb-2">
-            <TagList tags={post.tags} />
-          </div>
-        )}
 
         <ShareButtons title={post.title} slug={post.slug} />
 

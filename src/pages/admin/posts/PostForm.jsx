@@ -8,13 +8,11 @@ import {
   Save,
   Trash2,
   Upload,
-  X,
 } from 'lucide-react';
-import { Container, Button, Input, Textarea, Badge } from '../../../components/ui';
+import { Container, Button, Input, Textarea } from '../../../components/ui';
 import { TiptapEditor } from '../../../components/blog/editor';
 import { getPostById, createPost, updatePost } from '../../../api/blogService';
 import { listCategories } from '../../../api/categoryService';
-import { listTags } from '../../../api/tagService';
 import { listUsers } from '../../../api/userService';
 import { uploadCoverImage, deleteUpload, resolveUploadUrl } from '../../../api/uploadService';
 import { isHttpError } from '../../../api/httpError';
@@ -64,7 +62,6 @@ function mapErrorToField(message) {
     [/^seo_title/i, 'seoTitle'],
     [/^seo_description/i, 'seoDescription'],
     [/^status/i, 'draft'],
-    [/^tags/i, 'tags'],
     [/publish_at/i, 'publishAt'],
     [/author/i, 'author'],
     [/category/i, 'category'],
@@ -81,8 +78,7 @@ function defaultSnapshot() {
     content: '',
     coverImage: '',
     coverImageAlt: '',
-    category: '',
-    tags: [],
+    categoryId: '',
     draft: true,
     featured: false,
     seoTitle: '',
@@ -118,15 +114,12 @@ export default function PostForm() {
   const contentId = useId();
   const coverImageId = useId();
   const coverImageAltId = useId();
-  const categoryId = useId();
-  const tagsId = useId();
+  const categorySelectId = useId();
   const draftId = useId();
   const seoTitleId = useId();
   const seoDescriptionId = useId();
   const publishAtId = useId();
   const authorSelectId = useId();
-  const categoryListId = useId();
-  const tagListId = useId();
 
   const [loading, setLoading] = useState(isEdit);
   const [loadError, setLoadError] = useState('');
@@ -140,9 +133,7 @@ export default function PostForm() {
   const [content, setContent] = useState('');
   const [coverImage, setCoverImage] = useState('');
   const [coverImageAlt, setCoverImageAlt] = useState('');
-  const [category, setCategory] = useState('');
-  const [tags, setTags] = useState([]);
-  const [tagInput, setTagInput] = useState('');
+  const [categoryId, setCategoryId] = useState('');
   const [draft, setDraft] = useState(true);
   const [featured, setFeatured] = useState(false);
   const [seoTitle, setSeoTitle] = useState('');
@@ -152,7 +143,6 @@ export default function PostForm() {
   const [authorTouched, setAuthorTouched] = useState(false);
 
   const [categoryOptions, setCategoryOptions] = useState([]);
-  const [tagOptions, setTagOptions] = useState([]);
   const [authorOptions, setAuthorOptions] = useState([]);
 
   const [coverUploading, setCoverUploading] = useState(false);
@@ -178,27 +168,15 @@ export default function PostForm() {
   const fileInputRef = useRef(null);
   const [initialSnapshot, setInitialSnapshot] = useState(() => (isEdit ? null : JSON.stringify(defaultSnapshot())));
 
-  // Categories/tags are best-effort background loads — the form stays fully
-  // usable (both accept free text) if either fails to load.
   useEffect(() => {
     let cancelled = false;
     listCategories()
       .then((data) => {
         if (!cancelled) setCategoryOptions(Array.isArray(data) ? data : []);
       })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    listTags()
-      .then((data) => {
-        if (!cancelled) setTagOptions(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setFormError('Could not load categories. Please refresh and try again.');
+      });
     return () => {
       cancelled = true;
     };
@@ -239,8 +217,7 @@ export default function PostForm() {
         setContent(post.content ?? '');
         setCoverImage(post.cover_image ?? '');
         setCoverImageAlt(post.cover_image_alt ?? '');
-        setCategory(post.category ?? '');
-        setTags(post.tags ?? []);
+        setCategoryId(post.category_id != null ? String(post.category_id) : '');
         setDraft(post.draft);
         setFeatured(post.featured);
         setSeoTitle(post.seo_title ?? '');
@@ -256,8 +233,7 @@ export default function PostForm() {
           content: post.content ?? '',
           coverImage: post.cover_image ?? '',
           coverImageAlt: post.cover_image_alt ?? '',
-          category: post.category ?? '',
-          tags: post.tags ?? [],
+          categoryId: post.category_id != null ? String(post.category_id) : '',
           draft: post.draft,
           featured: post.featured,
           seoTitle: post.seo_title ?? '',
@@ -289,8 +265,7 @@ export default function PostForm() {
     content,
     coverImage,
     coverImageAlt,
-    category,
-    tags,
+    categoryId,
     draft,
     featured,
     seoTitle,
@@ -427,26 +402,6 @@ export default function PostForm() {
     }
   };
 
-  const addTag = (raw) => {
-    const value = raw.trim();
-    if (!value) return;
-    setTags((prev) => (prev.some((t) => t.toLowerCase() === value.toLowerCase()) ? prev : [...prev, value]));
-    setTagInput('');
-  };
-
-  const removeTag = (value) => {
-    setTags((prev) => prev.filter((t) => t !== value));
-  };
-
-  const handleTagKeyDown = (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      addTag(tagInput);
-    } else if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
-      removeTag(tags[tags.length - 1]);
-    }
-  };
-
   const confirmDiscardIfDirty = (e) => {
     if (dirty && !window.confirm(UNSAVED_CHANGES_MESSAGE)) {
       e.preventDefault();
@@ -463,6 +418,9 @@ export default function PostForm() {
     }
     if (!content.trim()) {
       errors.content = 'Content is required.';
+    }
+    if (!categoryId) {
+      errors.category = 'Please select a category.';
     }
     if (excerpt.length > 400) {
       errors.excerpt = 'Short description must be at most 400 characters.';
@@ -500,8 +458,7 @@ export default function PostForm() {
       excerpt: excerpt.trim(),
       cover_image: coverImage.trim() || null,
       cover_image_alt: coverImageAlt.trim() || null,
-      category: category.trim(),
-      tags,
+      category_id: Number(categoryId),
       featured,
       draft,
       seo_title: seoTitle.trim(),
@@ -750,63 +707,28 @@ export default function PostForm() {
               {fieldErrors.author && <p className="field-error" role="alert">{fieldErrors.author}</p>}
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-5">
-              <div>
-                <Input
-                  id={categoryId}
-                  label="Category"
-                  list={categoryListId}
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  error={fieldErrors.category}
-                  disabled={submitting}
-                  placeholder="Pick or type a new category"
-                />
-                <datalist id={categoryListId}>
-                  {(categoryOptions ?? []).map((c) => (
-                    <option key={c.id} value={c.name} />
-                  ))}
-                </datalist>
-              </div>
-
-              <div>
-                <label htmlFor={tagsId} className="field-label">
-                  Tags
-                </label>
-                <div className="field-input flex flex-wrap items-center gap-1.5 py-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="accent" size="sm" className="!inline-flex items-center gap-1">
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        disabled={submitting}
-                        aria-label={`Remove tag ${tag}`}
-                        className="hover:text-rose-600"
-                      >
-                        <X size={11} aria-hidden="true" />
-                      </button>
-                    </Badge>
-                  ))}
-                  <input
-                    id={tagsId}
-                    list={tagListId}
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={handleTagKeyDown}
-                    onBlur={() => addTag(tagInput)}
-                    disabled={submitting}
-                    placeholder={tags.length === 0 ? 'Type a tag, press Enter' : ''}
-                    className="flex-1 min-w-[8rem] outline-none text-sm bg-transparent"
-                  />
-                </div>
-                <datalist id={tagListId}>
-                  {(tagOptions ?? []).map((t) => (
-                    <option key={t.id} value={t.name} />
-                  ))}
-                </datalist>
-                {fieldErrors.tags && <p className="field-error" role="alert">{fieldErrors.tags}</p>}
-              </div>
+            <div>
+              <label htmlFor={categorySelectId} className="field-label">
+                Category
+              </label>
+              <select
+                id={categorySelectId}
+                className="field-input"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                disabled={submitting}
+                required
+              >
+                <option value="" disabled>
+                  Select Category
+                </option>
+                {(categoryOptions ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {fieldErrors.category && <p className="field-error" role="alert">{fieldErrors.category}</p>}
             </div>
 
             <div className="grid sm:grid-cols-2 gap-5">

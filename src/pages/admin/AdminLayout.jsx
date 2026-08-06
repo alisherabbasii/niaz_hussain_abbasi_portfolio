@@ -5,12 +5,10 @@ import {
   ChevronsRight,
   ExternalLink,
   FolderTree,
-  Image as ImageIcon,
   LayoutDashboard,
   LogOut,
   Menu,
   Newspaper,
-  Tag,
   User,
   Users,
   X,
@@ -23,9 +21,7 @@ function navItems(admin) {
   return [
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/admin/blogs', label: 'Blogs', icon: Newspaper, end: false },
-    { label: 'Categories', icon: FolderTree, disabled: true },
-    { label: 'Tags', icon: Tag, disabled: true },
-    { label: 'Media', icon: ImageIcon, disabled: true },
+    { to: '/admin/categories', label: 'Categories', icon: FolderTree, end: false },
     canManageUsers(admin)
       ? { to: '/admin/users', label: 'Users', icon: Users, end: false }
       : null,
@@ -37,6 +33,9 @@ const PAGE_TITLES = [
   { pattern: /^\/admin\/blogs\/new$/, title: 'New Blog Post' },
   { pattern: /^\/admin\/blogs\/[^/]+\/edit$/, title: 'Edit Blog Post' },
   { pattern: /^\/admin\/blogs$/, title: 'Blogs' },
+  { pattern: /^\/admin\/categories\/new$/, title: 'New Category' },
+  { pattern: /^\/admin\/categories\/[^/]+\/edit$/, title: 'Edit Category' },
+  { pattern: /^\/admin\/categories$/, title: 'Categories' },
   { pattern: /^\/admin\/users\/new$/, title: 'Add User' },
   { pattern: /^\/admin\/users\/[^/]+\/edit$/, title: 'Edit User' },
   { pattern: /^\/admin\/users$/, title: 'Users' },

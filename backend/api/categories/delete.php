@@ -14,11 +14,12 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
  * `id` may be given as a query param or in a JSON body.
  * Requires an authenticated admin session + CSRF header.
  *
- * blog_posts.category_id is ON DELETE SET NULL at the schema level, so the
- * database alone would silently null out every post's category on delete.
- * This endpoint blocks that instead: a category still assigned to any post
- * is refused with a 409 rather than deleted out from under those posts.
- * Reassign (or delete) those posts first, then retry.
+ * A category still assigned to any post is refused with a 409 rather than
+ * deleted out from under those posts — blog_posts.category_id is NOT NULL
+ * and its FK is ON DELETE RESTRICT (see migration 004), so the database
+ * itself would reject the DELETE anyway; this check exists to surface a
+ * clear, actionable error instead of a raw FK-constraint failure. Reassign
+ * (or delete) those posts first, then retry.
  */
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'DELETE') {
@@ -55,7 +56,7 @@ try {
     if ($postCount > 0) {
         $pdo->rollBack();
         json_response(409, [
-            'error' => "Cannot delete category \"{$existing['name']}\": it is assigned to {$postCount} post(s). Reassign or remove those posts first.",
+            'error' => 'This category is assigned to existing blog posts. Move or delete those blogs before deleting this category.',
         ]);
     }
 

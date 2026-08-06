@@ -16,7 +16,6 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
  *   per_page   int, default 10, max 50
  *   search     substring match against title/description/content
  *   category   filter by category name
- *   tag        filter by tag name
  *   featured   "1"/"0"/"true"/"false"
  *   draft      "1"/"0"/"true"/"false" — only honored for an authenticated
  *              admin; anonymous callers always get published-only results.
@@ -67,14 +66,6 @@ try {
         $params['category'] = $category;
     }
 
-    $tag = trim((string) ($_GET['tag'] ?? ''));
-    $tagJoin = '';
-    if ($tag !== '') {
-        $tagJoin = 'INNER JOIN blog_post_tags bptf ON bptf.post_id = bp.id
-                    INNER JOIN tags tf ON tf.id = bptf.tag_id AND tf.name = :tag';
-        $params['tag'] = $tag;
-    }
-
     if (isset($_GET['featured'])) {
         $featured = filter_var($_GET['featured'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
         if ($featured !== null) {
@@ -114,13 +105,12 @@ try {
     $countSql = "SELECT COUNT(DISTINCT bp.id) AS total
                  FROM blog_posts bp
                  LEFT JOIN categories c ON c.id = bp.category_id
-                 {$tagJoin}
                  {$whereSql}";
     $countStmt = $pdo->prepare($countSql);
     $countStmt->execute($params);
     $total = (int) $countStmt->fetch()['total'];
 
-    $listSql = blog_select_base() . " {$tagJoin} {$whereSql}
+    $listSql = blog_select_base() . " {$whereSql}
                 ORDER BY {$orderBy}
                 LIMIT :limit OFFSET :offset";
     $listStmt = $pdo->prepare($listSql);
@@ -135,7 +125,7 @@ try {
     $data = array_map(
         static function (array $row) use ($pdo): array {
             blog_backfill_published_at($pdo, $row);
-            return blog_format_post($row, blog_fetch_tags($pdo, (int) $row['id']));
+            return blog_format_post($row);
         },
         $rows
     );

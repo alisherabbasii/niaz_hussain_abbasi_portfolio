@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertTriangle, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Container, PageSection, Button, Input, Skeleton } from '../../components/ui';
-import { BlogGrid, BlogEmptyState, FeaturedBlogCard, TagList } from '../../components/blog';
+import { BlogGrid, BlogEmptyState, FeaturedBlogCard } from '../../components/blog';
 import { listPosts } from '../../api/blogService';
 import { listCategories } from '../../api/categoryService';
-import { listTags } from '../../api/tagService';
 import { toDisplayPost } from '../../features/blog/utils';
 import { useSEO } from '../../utils/useSEO';
 import { cn } from '../../utils/cn';
@@ -19,9 +18,8 @@ const BlogIndex = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') ?? '';
   const category = searchParams.get('category') ?? '';
-  const tag = searchParams.get('tag') ?? '';
   const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1);
-  const hasActiveFilters = Boolean(query || category || tag);
+  const hasActiveFilters = Boolean(query || category);
 
   // Keeps the search box in sync when `q` changes from outside typing (e.g.
   // "Clear filters", browser back/forward) — mirrors admin PostList.jsx.
@@ -38,7 +36,6 @@ const BlogIndex = () => {
 
   const [featuredPost, setFeaturedPost] = useState(null);
   const [categories, setCategories] = useState([]);
-  const [tags, setTags] = useState([]);
 
   const updateParams = useCallback(
     (patch, { resetPage = true } = {}) => {
@@ -67,18 +64,13 @@ const BlogIndex = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
-  // Best-effort — the filter pills just stay hidden if these fail, the rest
+  // Best-effort — the filter pills just stay hidden if this fails, the rest
   // of the page (search, pagination) still works.
   useEffect(() => {
     let cancelled = false;
     listCategories()
       .then((data) => {
         if (!cancelled) setCategories(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {});
-    listTags()
-      .then((data) => {
-        if (!cancelled) setTags(Array.isArray(data) ? data : []);
       })
       .catch(() => {});
     return () => {
@@ -129,7 +121,6 @@ const BlogIndex = () => {
           per_page: PER_PAGE,
           search: query || undefined,
           category: category || undefined,
-          tag: tag || undefined,
         });
       })
       .then((result) => {
@@ -145,7 +136,7 @@ const BlogIndex = () => {
     return () => {
       cancelled = true;
     };
-  }, [page, query, category, tag]);
+  }, [page, query, category]);
 
   useEffect(() => fetchPosts(), [fetchPosts]);
 
@@ -240,25 +231,6 @@ const BlogIndex = () => {
             </div>
           )}
         </div>
-
-        {tags.length > 0 && (
-          <div className="mb-14 flex flex-wrap items-center gap-3">
-            <TagList
-              tags={tags.map((t) => t.name)}
-              onTagClick={(t) => updateParams({ tag: tag === t ? '' : t })}
-            />
-            {tag && (
-              <button
-                type="button"
-                onClick={() => updateParams({ tag: '' })}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-accent-strong hover:underline"
-              >
-                <X size={12} aria-hidden="true" />
-                Clear tag: {tag}
-              </button>
-            )}
-          </div>
-        )}
 
         {showFeatured && (
           <section className="mb-16">

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateReadingTimeMinutes,
   filterByCategory,
-  filterByTag,
   filterFeaturedPosts,
   filterPublishedPosts,
   findDuplicateSlugs,
@@ -26,7 +25,6 @@ function makePost(overrides: Partial<BlogPost> = {}): BlogPost {
     updatedAt: null,
     author: 'Author',
     category: 'Community',
-    tags: [],
     coverImage: null,
     coverImageAlt: '',
     featured: false,
@@ -180,16 +178,11 @@ describe('filterPublishedPosts / filterFeaturedPosts', () => {
   });
 });
 
-describe('filterByCategory / filterByTag', () => {
-  const a = makePost({ slug: 'a', category: 'Leadership', tags: ['grit'] });
-  const b = makePost({ slug: 'b', category: 'Community', tags: ['grit', 'faith'] });
+describe('filterByCategory', () => {
+  const a = makePost({ slug: 'a', category: 'Leadership' });
+  const b = makePost({ slug: 'b', category: 'Community' });
 
   it('filters by exact category match', () => {
     expect(filterByCategory([a, b], 'Leadership').map((p) => p.slug)).toEqual(['a']);
-  });
-
-  it('filters by tag membership', () => {
-    expect(filterByTag([a, b], 'faith').map((p) => p.slug)).toEqual(['b']);
-    expect(filterByTag([a, b], 'grit').map((p) => p.slug).sort()).toEqual(['a', 'b']);
   });
 });

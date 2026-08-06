@@ -12,7 +12,7 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
 
 /**
  * POST /api/categories/create.php
- * Body: { name: string (required) }
+ * Body: { name: string (required), description?: string|null }
  *
  * Requires an authenticated admin session + CSRF header. `name` is
  * normalized (trimmed, internal whitespace collapsed) and must be unique;
@@ -46,6 +46,9 @@ if ($slugBase === '') {
     json_response(422, ['error' => 'name must contain at least one letter or number']);
 }
 
+$descriptionInput = array_key_exists('description', $body) ? $body['description'] : null;
+$description = ($descriptionInput !== null && $descriptionInput !== '') ? trim((string) $descriptionInput) : null;
+
 try {
     $pdo = Database::getConnection();
 
@@ -58,8 +61,8 @@ try {
     try {
         $slug = blog_unique_table_slug($pdo, 'categories', $slugBase);
 
-        $insert = $pdo->prepare('INSERT INTO categories (name, slug) VALUES (:name, :slug)');
-        $insert->execute(['name' => $name, 'slug' => $slug]);
+        $insert = $pdo->prepare('INSERT INTO categories (name, slug, description) VALUES (:name, :slug, :description)');
+        $insert->execute(['name' => $name, 'slug' => $slug, 'description' => $description]);
         $id = (int) $pdo->lastInsertId();
 
         $pdo->commit();

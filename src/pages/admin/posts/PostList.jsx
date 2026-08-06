@@ -86,8 +86,7 @@ async function duplicatePost(post) {
         slug,
         content: post.content,
         excerpt: post.excerpt || undefined,
-        category: post.category || undefined,
-        tags: post.tags,
+        category_id: post.category_id,
         featured: false,
         draft: true,
       });

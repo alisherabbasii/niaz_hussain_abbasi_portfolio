@@ -15,9 +15,8 @@ declare(strict_types=1);
  *   php backend/tests/blog_crud_test.php
  *   (BASE_URL env var overrides the default http://127.0.0.1:8987)
  *
- * Exits 0 if every assertion passed, 1 otherwise. Cleans up every admin user
- * and blog post it creates, but leaves any category/tag rows it
- * find-or-creates (harmless, matches normal app behavior).
+ * Exits 0 if every assertion passed, 1 otherwise. Cleans up every admin
+ * user, blog post, and test category it creates.
  */
 
 require_once __DIR__ . '/../config/env.php';
@@ -148,10 +147,16 @@ $pdo = Database::getConnection();
 
 $createdPostIds = [];
 $createdAdminIds = [];
+$createdCategoryIds = [];
 
-register_shutdown_function(function () use (&$createdPostIds, &$createdAdminIds, $pdo): void {
+register_shutdown_function(function () use (&$createdPostIds, &$createdAdminIds, &$createdCategoryIds, $pdo): void {
+    // Posts first: categories can't be deleted (FK ON DELETE RESTRICT) while
+    // any post still references them.
     foreach ($createdPostIds as $id) {
         $pdo->prepare('DELETE FROM blog_posts WHERE id = :id')->execute(['id' => $id]);
+    }
+    foreach ($createdCategoryIds as $id) {
+        $pdo->prepare('DELETE FROM categories WHERE id = :id')->execute(['id' => $id]);
     }
     foreach ($createdAdminIds as $id) {
         $pdo->prepare('DELETE FROM admins WHERE id = :id')->execute(['id' => $id]);
@@ -167,6 +172,25 @@ report($loginResp['status'] === 200, 'super_admin login', (string) $loginResp['s
 if ($loginResp['status'] !== 200) {
     fwrite(STDERR, "Cannot continue without a working super_admin login. Response: {$loginResp['raw']}\n");
     exit(1);
+}
+
+// Every blog post now requires a real category_id (see migration
+// 004_categories_cleanup) — create two throwaway test categories to assign
+// posts to and to exercise reassignment.
+$categorySuffix = bin2hex(random_bytes(4));
+
+$testCategoryResp = $super->post('/api/categories/create.php', ['name' => "Automated Tests {$categorySuffix}"]);
+report($testCategoryResp['status'] === 201, 'create test category', (string) $testCategoryResp['status']);
+$testCategoryId = $testCategoryResp['json']['data']['id'] ?? null;
+if (is_int($testCategoryId)) {
+    $createdCategoryIds[] = $testCategoryId;
+}
+
+$testCategory2Resp = $super->post('/api/categories/create.php', ['name' => "Automated Tests Alt {$categorySuffix}"]);
+report($testCategory2Resp['status'] === 201, 'create second test category', (string) $testCategory2Resp['status']);
+$testCategoryId2 = $testCategory2Resp['json']['data']['id'] ?? null;
+if (is_int($testCategoryId2)) {
+    $createdCategoryIds[] = $testCategoryId2;
 }
 
 // Create a throwaway 'editor' account to exercise role-scoped authorization.
@@ -210,8 +234,7 @@ $createDraftResp = $super->post('/api/blog/create.php', [
     'cover_image' => '/uploads/blog/covers/test-cover.jpg',
     'cover_image_alt' => 'A test cover image',
     'author' => $superAdminEmail,
-    'category' => 'Automated Tests',
-    'tags' => ['test', 'draft'],
+    'category_id' => $testCategoryId,
     'status' => 'draft',
     'is_featured' => false,
     'seo_title' => 'SEO Title',
@@ -227,7 +250,7 @@ report(($draftPost['excerpt'] ?? null) === 'A draft post used for automated back
 report(($draftPost['cover_image'] ?? null) === '/uploads/blog/covers/test-cover.jpg', 'cover_image stored/returned');
 report(($draftPost['cover_image_alt'] ?? null) === 'A test cover image', 'cover_image_alt stored/returned');
 report(array_key_exists('publish_date', $draftPost) && $draftPost['publish_date'] === null, 'draft has no publish_date');
-report(in_array('draft', $draftPost['tags'] ?? [], true) && in_array('test', $draftPost['tags'] ?? [], true), 'tags attached correctly');
+report(($draftPost['category_id'] ?? null) === $testCategoryId, 'category_id attached correctly');
 
 echo "\n== 2. Create published post (immediate + scheduled) ==\n";
 
@@ -238,8 +261,7 @@ $createPublishedResp = $super->post('/api/blog/create.php', [
     'short_description' => 'A published post used for automated backend testing.',
     'content' => '<p>Published content.</p>',
     'author' => $superAdminEmail,
-    'category' => 'Automated Tests',
-    'tags' => ['test', 'published'],
+    'category_id' => $testCategoryId,
     'status' => 'published',
     'is_featured' => true,
 ]);
@@ -258,6 +280,7 @@ $createScheduledResp = $super->post('/api/blog/create.php', [
     'title' => 'Test Scheduled Post',
     'slug' => $scheduledSlug,
     'content' => '<p>Scheduled content.</p>',
+    'category_id' => $testCategoryId,
     'status' => 'published',
     'publish_at' => $futureDate,
 ]);
@@ -287,6 +310,7 @@ $dupResp = $super->post('/api/blog/create.php', [
     'title' => 'Duplicate Slug Attempt',
     'slug' => $publishedSlug,
     'content' => '<p>Should be rejected.</p>',
+    'category_id' => $testCategoryId,
     'status' => 'draft',
 ]);
 report($dupResp['status'] === 409, 'duplicate slug -> 409', (string) $dupResp['status']);
@@ -325,20 +349,18 @@ $noopUpdateResp = $super->put('/api/blog/update.php?id=' . $draftPost['id'], [
 $afterNoop = $noopUpdateResp['json']['data']['updated_at'] ?? null;
 report($beforeNoop === $afterNoop, 'updated_at NOT bumped when the submitted value is identical (no real change)');
 
-echo "\n== 7. Change tags ==\n";
+echo "\n== 7. Change category ==\n";
 
-$tagsResp = $super->put('/api/blog/update.php?id=' . $draftPost['id'], [
-    'tags' => ['test', 'retagged'],
+$categoryChangeResp = $super->put('/api/blog/update.php?id=' . $draftPost['id'], [
+    'category_id' => $testCategoryId2,
 ]);
-report($tagsResp['status'] === 200, 'PUT update.php (tags) -> 200', (string) $tagsResp['status']);
-$retagged = $tagsResp['json']['data']['tags'] ?? [];
-sort($retagged);
-report($retagged === ['retagged', 'test'], 'tag set replaced correctly (old tag dropped, new tag added)');
+report($categoryChangeResp['status'] === 200, 'PUT update.php (category_id) -> 200', (string) $categoryChangeResp['status']);
+report(($categoryChangeResp['json']['data']['category_id'] ?? null) === $testCategoryId2, 'category reassigned correctly');
 
-$stmt = $pdo->prepare('SELECT COUNT(*) FROM blog_post_tags WHERE post_id = :id');
-$stmt->execute(['id' => $draftPost['id']]);
-$relCount = (int) $stmt->fetchColumn();
-report($relCount === 2, 'exactly one relationship row per tag, no duplicates', "found {$relCount}");
+$invalidCategoryChangeResp = $super->put('/api/blog/update.php?id=' . $draftPost['id'], [
+    'category_id' => 999999999,
+]);
+report($invalidCategoryChangeResp['status'] === 422, 'reassigning to a non-existent category_id -> 422');
 
 echo "\n== 8. Unpublish (and re-publish preserves original publish_date) ==\n";
 
@@ -369,10 +391,6 @@ $createdPostIds = array_values(array_filter($createdPostIds, fn ($id) => $id !==
 $afterDeleteResp = $super->get('/api/blog/show.php?id=' . $draftPost['id']);
 report($afterDeleteResp['status'] === 404, 'deleted post 404s afterward', (string) $afterDeleteResp['status']);
 
-$stmt = $pdo->prepare('SELECT COUNT(*) FROM blog_post_tags WHERE post_id = :id');
-$stmt->execute(['id' => $draftPost['id']]);
-report((int) $stmt->fetchColumn() === 0, 'blog_post_tags rows removed safely on delete');
-
 echo "\n== 10. Unauthorized / role-based rejection ==\n";
 
 $anonCreateResp = $anon->post('/api/blog/create.php', [
@@ -402,6 +420,7 @@ $editorPostResp = $editor->post('/api/blog/create.php', [
     'title' => 'Editor Owned Post',
     'slug' => "test-editor-post-{$suffix}",
     'content' => '<p>Owned by editor.</p>',
+    'category_id' => $testCategoryId,
     'status' => 'draft',
 ]);
 report($editorPostResp['status'] === 201, 'editor can create their own post', (string) $editorPostResp['status']);
@@ -436,6 +455,7 @@ foreach (['a', 'b', 'c'] as $letter) {
         'title' => "{$orderMarker} {$letter}",
         'slug' => "{$orderMarker}-{$letter}",
         'content' => '<p>Ordering test content.</p>',
+        'category_id' => $testCategoryId,
         'status' => 'published',
     ]);
     $id = $resp['json']['data']['id'] ?? null;
@@ -470,17 +490,20 @@ echo "\n== Extra validation checks ==\n";
 $missingTitleResp = $super->post('/api/blog/create.php', ['content' => 'x']);
 report($missingTitleResp['status'] === 422 && isset($missingTitleResp['json']['error']), 'missing title -> 422 with clear error message');
 
-$badTagsResp = $super->post('/api/blog/create.php', ['title' => 'x', 'content' => 'x', 'tags' => 'not-an-array']);
-report($badTagsResp['status'] === 422, 'non-array tags -> 422');
+$missingCategoryResp = $super->post('/api/blog/create.php', ['title' => 'x', 'content' => 'x']);
+report($missingCategoryResp['status'] === 422, 'missing category_id -> 422');
 
-$badCoverResp = $super->post('/api/blog/create.php', ['title' => 'x', 'content' => 'x', 'cover_image' => 'not-a-path']);
+$invalidCategoryResp = $super->post('/api/blog/create.php', ['title' => 'x', 'content' => 'x', 'category_id' => 999999999]);
+report($invalidCategoryResp['status'] === 422, 'non-existent category_id -> 422');
+
+$badCoverResp = $super->post('/api/blog/create.php', ['title' => 'x', 'content' => 'x', 'category_id' => $testCategoryId, 'cover_image' => 'not-a-path']);
 report($badCoverResp['status'] === 422, 'cover_image not starting with "/" -> 422');
 
-$badStatusResp = $super->post('/api/blog/create.php', ['title' => 'x', 'content' => 'x', 'status' => 'archived']);
+$badStatusResp = $super->post('/api/blog/create.php', ['title' => 'x', 'content' => 'x', 'category_id' => $testCategoryId, 'status' => 'archived']);
 report($badStatusResp['status'] === 422, "status other than draft/published -> 422");
 
 $noSqlLeak = stripos($missingTitleResp['raw'], 'SQLSTATE') === false
-    && stripos($badTagsResp['raw'], 'PDOException') === false;
+    && stripos($invalidCategoryResp['raw'], 'PDOException') === false;
 report($noSqlLeak, 'no raw SQL/PDO error text leaked in responses');
 
 echo "\n== Summary ==\n";

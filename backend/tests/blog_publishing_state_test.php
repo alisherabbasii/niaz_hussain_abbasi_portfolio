@@ -20,7 +20,7 @@ declare(strict_types=1);
  *   (BASE_URL env var overrides the default http://127.0.0.1:8987)
  *
  * Exits 0 if every assertion passed, 1 otherwise. Cleans up every blog post
- * it creates.
+ * and test category it creates.
  */
 
 require_once __DIR__ . '/../config/env.php';
@@ -138,9 +138,15 @@ $superAdminPassword = env_get('INSTALL_ADMIN_PASSWORD', required: true);
 $pdo = Database::getConnection();
 
 $createdPostIds = [];
-register_shutdown_function(function () use (&$createdPostIds, $pdo): void {
+$createdCategoryIds = [];
+register_shutdown_function(function () use (&$createdPostIds, &$createdCategoryIds, $pdo): void {
+    // Posts first: categories can't be deleted (FK ON DELETE RESTRICT) while
+    // any post still references them.
     foreach ($createdPostIds as $id) {
         $pdo->prepare('DELETE FROM blog_posts WHERE id = :id')->execute(['id' => $id]);
+    }
+    foreach ($createdCategoryIds as $id) {
+        $pdo->prepare('DELETE FROM categories WHERE id = :id')->execute(['id' => $id]);
     }
 });
 
@@ -158,6 +164,15 @@ $anon->bootstrapCsrf();
 
 $suffix = bin2hex(random_bytes(4));
 
+// Every blog post now requires a real category_id (see migration
+// 004_categories_cleanup).
+$categoryResp = $admin->post('/api/categories/create.php', ['name' => "Publish State Test {$suffix}"]);
+report($categoryResp['status'] === 201, 'create test category', (string) $categoryResp['status']);
+$testCategoryId = $categoryResp['json']['data']['id'] ?? null;
+if (is_int($testCategoryId)) {
+    $createdCategoryIds[] = $testCategoryId;
+}
+
 echo "\n== 0. Timezone sanity ==\n";
 $tzRow = $pdo->query('SELECT @@session.time_zone AS tz')->fetch();
 report(date_default_timezone_get() !== '', 'PHP has an explicit default timezone set', date_default_timezone_get());
@@ -172,6 +187,7 @@ $r = $admin->post('/api/blog/create.php', [
     'title' => 'Publish State Draft',
     'slug' => $draftSlug,
     'content' => '<p>draft</p>',
+    'category_id' => $testCategoryId,
     'status' => 'draft',
 ]);
 report($r['status'] === 201, 'draft post created', (string) $r['status']);
@@ -213,6 +229,7 @@ $r = $admin->post('/api/blog/create.php', [
     'title' => 'Publish State Future',
     'slug' => $futureSlug,
     'content' => '<p>future</p>',
+    'category_id' => $testCategoryId,
     'status' => 'published',
     'publish_at' => $future,
 ]);
