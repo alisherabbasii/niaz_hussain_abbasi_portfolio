@@ -132,7 +132,7 @@ nothing would ever set `published_at`, leaving it `NULL` indefinitely even
 though the post is now genuinely live. Beyond being factually wrong
 ("published_at is set when first published" wouldn't hold), a stuck `NULL`
 also corrupts list ordering: `index.php` sorts
-`ORDER BY published_at DESC, created_at DESC`, and MySQL sorts `NULL`
+`ORDER BY published_at DESC, created_at DESC, id DESC`, and MySQL sorts `NULL`
 last in a `DESC` ordering — so an actually-live post would silently sink to
 the bottom of every listing.
 

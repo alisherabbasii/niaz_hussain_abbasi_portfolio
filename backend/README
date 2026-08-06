@@ -7,4 +7,4 @@ Then on the server:
   - Run php backend/install.php once, over SSH if your plan has it, or via install.php?token=... (set INSTALL_TOKEN in .env first) 
   if it doesn't â then remove/block install.php afterward per its own comments.
 
-  php -S 127.0.0.1:8987 -t backend
+  php -S 127.0.0.1:8000 -t backend

@@ -20,9 +20,11 @@ require_once __DIR__ . '/../../middleware/AuthMiddleware.php';
  *   featured   "1"/"0"/"true"/"false"
  *   draft      "1"/"0"/"true"/"false" — only honored for an authenticated
  *              admin; anonymous callers always get published-only results.
- *   sort       "updated_desc" | "updated_asc" — sorts by bp.updated_at.
- *              Any other/absent value keeps the default order (published_at
- *              then created_at, newest first).
+ *   sort       "updated_desc" | "updated_asc" — sorts by bp.updated_at,
+ *              tie-broken by bp.id so paginated order is deterministic.
+ *              Any other/absent value keeps the default order (published_at,
+ *              then created_at, then id, all newest-first) — see
+ *              docs/BLOG-DATE-AND-PUBLISHING-RULES.md.
  *
  * Anonymous callers never see draft posts. An authenticated admin sees every
  * status unless `draft` narrows it.
@@ -95,11 +97,18 @@ try {
     $whereSql = $conditions !== [] ? ('WHERE ' . implode(' AND ', $conditions)) : '';
 
     // Whitelisted, not built from raw input — $_GET['sort'] only ever
-    // selects one of these two literal ORDER BY clauses.
+    // selects one of these literal ORDER BY clauses. Every branch ends in
+    // `bp.id` as a final tiebreaker: published_at/created_at/updated_at are
+    // DATETIME (second precision), so rows created or published within the
+    // same second — bulk imports, seed data, or two posts published back to
+    // back — tie on those columns alone, and MySQL does not guarantee a
+    // stable order for ties without one. Without this, tied rows could
+    // shuffle between requests (older posts intermittently outranking newer
+    // ones) and even shift across pages of the same paginated query.
     $orderBy = match ($_GET['sort'] ?? null) {
-        'updated_desc' => 'bp.updated_at DESC',
-        'updated_asc' => 'bp.updated_at ASC',
-        default => 'bp.published_at DESC, bp.created_at DESC',
+        'updated_desc' => 'bp.updated_at DESC, bp.id DESC',
+        'updated_asc' => 'bp.updated_at ASC, bp.id ASC',
+        default => 'bp.published_at DESC, bp.created_at DESC, bp.id DESC',
     };
 
     $countSql = "SELECT COUNT(DISTINCT bp.id) AS total

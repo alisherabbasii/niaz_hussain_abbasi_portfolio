@@ -422,6 +422,49 @@ report($editorEditsOwnResp['status'] === 200, 'editor CAN update their own post'
 $editorAssignsAuthorResp = $editor->put('/api/blog/update.php?id=' . $editorPostId, ['author' => $superAdminEmail]);
 report($editorAssignsAuthorResp['status'] === 403, 'editor cannot reassign author to someone else', (string) $editorAssignsAuthorResp['status']);
 
+echo "\n== Listing order (reverse chronological, deterministic ties) ==\n";
+
+// Three posts created back-to-back can easily land in the same second
+// (DATETIME columns have no sub-second precision), so force an exact tie on
+// both published_at and created_at to reproduce that — then assert index.php
+// still orders them deterministically (highest id first), per
+// docs/BLOG-DATE-AND-PUBLISHING-RULES.md.
+$orderMarker = "order-test-{$suffix}";
+$orderPostIds = [];
+foreach (['a', 'b', 'c'] as $letter) {
+    $resp = $super->post('/api/blog/create.php', [
+        'title' => "{$orderMarker} {$letter}",
+        'slug' => "{$orderMarker}-{$letter}",
+        'content' => '<p>Ordering test content.</p>',
+        'status' => 'published',
+    ]);
+    $id = $resp['json']['data']['id'] ?? null;
+    if (is_int($id)) {
+        $orderPostIds[] = $id;
+        $createdPostIds[] = $id;
+    }
+}
+report(count($orderPostIds) === 3, 'created 3 posts for the ordering tie test');
+
+$tiedTimestamp = date('Y-m-d H:i:s');
+$tieStmt = $pdo->prepare('UPDATE blog_posts SET published_at = :ts, created_at = :ts WHERE id = :id');
+foreach ($orderPostIds as $id) {
+    $tieStmt->execute(['ts' => $tiedTimestamp, 'id' => $id]);
+}
+
+$orderListResp = $super->get('/api/blog/index.php?' . http_build_query([
+    'search' => $orderMarker,
+    'per_page' => 10,
+]));
+report($orderListResp['status'] === 200, 'GET index.php for tied posts -> 200', (string) $orderListResp['status']);
+$orderListIds = array_column($orderListResp['json']['data'] ?? [], 'id');
+$expectedOrder = array_values(array_reverse($orderPostIds)); // highest id (newest) first
+report(
+    $orderListIds === $expectedOrder,
+    'posts tied on published_at/created_at still sort deterministically by id DESC',
+    'got ' . json_encode($orderListIds) . ', expected ' . json_encode($expectedOrder)
+);
+
 echo "\n== Extra validation checks ==\n";
 
 $missingTitleResp = $super->post('/api/blog/create.php', ['content' => 'x']);
