@@ -50,19 +50,31 @@ try {
     $stmt->execute(['email' => $email]);
     $admin = $stmt->fetch();
 
-    $isActive = $admin !== false && (int) $admin['is_active'] === 1;
-
     // Always run password_verify(), even on a miss, against a fixed dummy
-    // hash so a nonexistent/inactive email doesn't respond measurably
-    // faster than a real one (timing side-channel on account enumeration).
-    $hashToVerify = $isActive
+    // hash so a nonexistent email doesn't respond measurably faster than a
+    // real one (timing side-channel on account enumeration). An inactive
+    // account still has a real hash on file, so it's verified against that
+    // — checking it costs the same as an active account's check, so this
+    // doesn't introduce a new timing signal, and it lets a genuinely
+    // correct password be told apart from a wrong one even when inactive.
+    $hashToVerify = $admin !== false
         ? $admin['password_hash']
         : '$2y$10$WwR6r6b8p6f0m4o4iJhU0eYQ0jZ2QwF0k0m1n2o3p4q5r6s7t8u9v.';
 
     $passwordValid = password_verify($password, $hashToVerify);
 
-    if (!$isActive || !$passwordValid) {
+    if ($admin === false || !$passwordValid) {
         json_response(401, ['error' => 'Invalid email or password']);
+    }
+
+    // Only reachable once the password has already been proven correct, so
+    // revealing "inactive" here doesn't tell an attacker anything they
+    // couldn't already deduce — they'd need the real password to get here.
+    if ((int) $admin['is_active'] !== 1) {
+        json_response(401, [
+            'error' => 'This account is inactive. Contact the site owner for access.',
+            'code' => 'ACCOUNT_INACTIVE',
+        ]);
     }
 
     session_login((int) $admin['id']);

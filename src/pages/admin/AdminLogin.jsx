@@ -10,9 +10,11 @@ const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password.';
 
 function messageForError(error) {
   if (isHttpError(error)) {
+    if (error.status === 401 && error.data?.code === 'ACCOUNT_INACTIVE') {
+      return 'This account is inactive. Contact the site owner for access.';
+    }
     if (error.status === 401) return INVALID_CREDENTIALS_MESSAGE;
     if (error.status === 422) return 'Enter a valid email and password.';
-    if (error.status === 403) return 'This account is inactive. Contact the site owner for access.';
     return error.message || 'Something went wrong. Please try again.';
   }
   if (isNetworkError(error)) return error.message;

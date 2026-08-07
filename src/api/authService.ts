@@ -35,14 +35,32 @@ export async function getCurrentSession(): Promise<Admin | null> {
  * exists for the session, so a login attempt with no prior request on the
  * page (fresh tab, no session-check yet) bootstraps one first via the same
  * session-check call `getCurrentSession()` makes.
+ *
+ * That priming call and this one both fire from the same click when the
+ * cookie is missing, so there's still a window (slow network, a mount-time
+ * `getCurrentSession()` from `AuthProvider` that hasn't landed yet) where
+ * the token in hand goes stale between reading it and the server checking
+ * it. Rather than surface that as an error and make the user click twice,
+ * retry once with a freshly re-primed token — a real CSRF rejection is the
+ * only way `login.php` returns 403, so it's always safe to retry here.
  */
 export async function login(email: string, password: string): Promise<Admin> {
   if (!hasCsrfToken()) {
     await getCurrentSession();
   }
 
-  const { data } = await apiClient.post<AdminEnvelope>('/auth/login.php', { email, password });
-  return data.admin;
+  try {
+    const { data } = await apiClient.post<AdminEnvelope>('/auth/login.php', { email, password });
+    return data.admin;
+  } catch (error) {
+    if (!(error instanceof HttpError) || error.status !== 403) {
+      throw error;
+    }
+
+    await getCurrentSession();
+    const { data } = await apiClient.post<AdminEnvelope>('/auth/login.php', { email, password });
+    return data.admin;
+  }
 }
 
 export async function logout(): Promise<void> {
