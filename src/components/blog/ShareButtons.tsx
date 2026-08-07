@@ -1,5 +1,5 @@
 import { Share2, Link2, Check } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const FacebookIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -21,61 +21,110 @@ const LinkedinIcon = () => (
   </svg>
 );
 
-export default function ShareButtons({ title, slug }: { title: string, slug: string }) {
+export default function ShareButtons({
+  title,
+  slug,
+  description,
+}: {
+  title: string;
+  slug: string;
+  description?: string;
+}) {
   const [copied, setCopied] = useState(false);
   const [url, setUrl] = useState('');
+  const [canNativeShare, setCanNativeShare] = useState(false);
 
   useEffect(() => {
+    // The currently-open blog's own URL — never the homepage, blog listing,
+    // or a hardcoded path — so every platform below shares exactly the
+    // article the visitor is reading.
     setUrl(window.location.href);
-  }, []);
+    setCanNativeShare(typeof navigator !== 'undefined' && typeof navigator.share === 'function');
+  }, [slug]);
 
-  const copyLink = () => {
+  const copyLink = useCallback(() => {
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
+  }, [url]);
+
+  const nativeShare = useCallback(() => {
+    navigator
+      .share({ title, text: description || title, url })
+      // The user dismissing the native share sheet also rejects this
+      // promise — nothing to surface as an error in that case.
+      .catch(() => {});
+  }, [title, description, url]);
+
+  const whatsappText = description ? `${title}\n\n${description}\n\nRead more:\n${url}` : `${title}\n\n${url}`;
 
   return (
     <div className="flex flex-col sm:flex-row items-center gap-4 py-6 border-y border-gray-100 my-10">
       <div className="flex items-center gap-2 text-secondary/60 font-bold text-sm uppercase tracking-wider">
         <Share2 size={16} /> Share Article:
       </div>
-      <div className="flex gap-2">
-        <a 
+      <div className="flex items-center gap-2">
+        {canNativeShare && (
+          <button
+            type="button"
+            onClick={nativeShare}
+            aria-label="Share"
+            className="w-10 h-10 rounded-full bg-accent/10 text-accent-strong flex items-center justify-center hover:bg-accent-strong hover:text-white transition-all"
+          >
+            <Share2 size={18} />
+          </button>
+        )}
+        <a
           href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`}
           target="_blank" rel="noopener noreferrer"
+          aria-label="Share on Facebook"
           className="w-10 h-10 rounded-full bg-[#1877F2]/10 text-[#1877F2] flex items-center justify-center hover:bg-[#1877F2] hover:text-white transition-all"
         >
           <FacebookIcon />
         </a>
-        <a 
+        <a
           href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`}
           target="_blank" rel="noopener noreferrer"
+          aria-label="Share on X (Twitter)"
           className="w-10 h-10 rounded-full bg-[#1DA1F2]/10 text-[#1DA1F2] flex items-center justify-center hover:bg-[#1DA1F2] hover:text-white transition-all"
         >
           <TwitterIcon />
         </a>
-        <a 
-          href={`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`}
+        <a
+          href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`}
           target="_blank" rel="noopener noreferrer"
+          aria-label="Share on LinkedIn"
           className="w-10 h-10 rounded-full bg-[#0A66C2]/10 text-[#0A66C2] flex items-center justify-center hover:bg-[#0A66C2] hover:text-white transition-all"
         >
           <LinkedinIcon />
         </a>
-        <a 
-          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(title + " " + url)}`}
+        <a
+          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`}
           target="_blank" rel="noopener noreferrer"
+          aria-label="Share on WhatsApp"
           className="w-10 h-10 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center hover:bg-[#25D366] hover:text-white transition-all"
         >
           {/* using link2 for whatsapp outline simply because lucide has no whatsapp icon sometimes easily fetched */}
           <Link2 size={18} />
         </a>
-        <button 
-          onClick={copyLink}
-          className="w-10 h-10 rounded-full bg-gray-100 text-secondary flex items-center justify-center hover:bg-secondary hover:text-white transition-all ml-4"
-        >
-          {copied ? <Check size={18} className="text-green-500" /> : <Link2 size={18} />}
-        </button>
+        <div className="relative ml-4">
+          <button
+            onClick={copyLink}
+            aria-label="Copy link"
+            className="w-10 h-10 rounded-full bg-gray-100 text-secondary flex items-center justify-center hover:bg-secondary hover:text-white transition-all"
+          >
+            {copied ? <Check size={18} className="text-green-500" /> : <Link2 size={18} />}
+          </button>
+          <span
+            role="status"
+            aria-live="polite"
+            className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap rounded-md bg-secondary px-2 py-1 text-xs font-semibold text-white shadow-sm transition-opacity z-10 ${
+              copied ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            Link copied successfully.
+          </span>
+        </div>
       </div>
     </div>
   );

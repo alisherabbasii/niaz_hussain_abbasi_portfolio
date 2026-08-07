@@ -11,6 +11,20 @@
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
+  # Social/search link-preview crawlers don't execute JavaScript, so the
+  # client-only Open Graph tags src/utils/useSEO.js injects after hydration
+  # are invisible to them — they'd see index.html's generic placeholder tags
+  # instead of the real post's title/description/image (this is the root
+  # cause of "Facebook share shows nothing"). For a /blog/{slug} request
+  # from one of these known crawler user agents, serve backend/blog-meta.php
+  # instead (deployed at /blog-meta.php — see backend/README's "backend/'s
+  # contents live alongside dist/'s output" layout): it reads the real post
+  # from the database and injects the correct Open Graph/Twitter meta tags
+  # into the same HTML shell. Real visitors and in-app navigation are
+  # untouched by this rule.
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Googlebot|bingbot|Applebot|Pinterest|redditbot|SkypeUriPreview|vkShare|W3C_Validator) [NC]
+  RewriteRule ^blog/([^/]+)/?$ /blog-meta.php?slug=$1 [L,QSA]
+
   # Everything else that looks like an app route (no file extension in the
   # last path segment) falls back to index.html so React Router can render
   # it client-side — this is what makes direct loads/refreshes of routes

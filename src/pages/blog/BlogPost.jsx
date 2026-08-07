@@ -279,7 +279,7 @@ const BlogPost = () => {
 
         <HtmlContent content={post.content} className={ARTICLE_PROSE_CLASSES} />
 
-        <ShareButtons title={post.title} slug={post.slug} />
+        <ShareButtons title={post.title} slug={post.slug} description={post.description} />
 
         {relatedPosts.length > 0 && (
           <section className="mt-16 mb-16">
