@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { AlertTriangle, KeyRound } from 'lucide-react';
-import { Modal, Button, Input } from '../../../components/ui';
+import { Modal, Button, PasswordInput } from '../../../components/ui';
 import { resetUserPassword } from '../../../api/userService';
 import { isHttpError } from '../../../api/httpError';
 
@@ -74,10 +74,9 @@ export default function ResetPasswordDialog({ user, onClose, onSuccess }) {
       </div>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <Input
+        <PasswordInput
           id={passwordId}
           label="New password"
-          type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
@@ -85,10 +84,9 @@ export default function ResetPasswordDialog({ user, onClose, onSuccess }) {
           disabled={submitting}
           required
         />
-        <Input
+        <PasswordInput
           id={confirmId}
           label="Confirm new password"
-          type="password"
           value={confirmation}
           onChange={(e) => setConfirmation(e.target.value)}
           autoComplete="new-password"

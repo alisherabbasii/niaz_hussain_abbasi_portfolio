@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, Save, UserPlus } from 'lucide-react';
-import { Container, Button, Input } from '../../../components/ui';
+import { Container, Button, Input, PasswordInput } from '../../../components/ui';
 import { getUserById, createUser, updateUser } from '../../../api/userService';
 import { useAuth } from '../../../features/admin/useAuth';
 import { ROLES, ROLE_LABELS, isSuperAdmin } from '../../../features/admin/permissions';
@@ -269,10 +269,9 @@ export default function UserForm() {
                 </p>
               )}
               <div className="grid sm:grid-cols-2 gap-5">
-                <Input
+                <PasswordInput
                   id={passwordId}
                   label={isEdit ? 'New password' : 'Password'}
-                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   error={fieldErrors.password}
@@ -281,10 +280,9 @@ export default function UserForm() {
                   hint={!fieldErrors.password ? 'At least 10 characters, with a letter and a number.' : undefined}
                   required={!isEdit}
                 />
-                <Input
+                <PasswordInput
                   id={confirmId}
                   label="Confirm password"
-                  type="password"
                   value={confirmation}
                   onChange={(e) => setConfirmation(e.target.value)}
                   error={fieldErrors.confirmation}

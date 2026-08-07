@@ -8,6 +8,7 @@ export { default as Card } from './Card';
 export { default as IconBox } from './IconBox';
 export { default as SocialLink } from './SocialLink';
 export { default as Input } from './Input';
+export { default as PasswordInput } from './PasswordInput';
 export { default as Textarea } from './Textarea';
 export { default as SkipToContent } from './SkipToContent';
 export { default as Skeleton } from './Skeleton';

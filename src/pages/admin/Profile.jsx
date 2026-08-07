@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { AlertTriangle, CheckCircle2, KeyRound, Save, UserCircle } from 'lucide-react';
-import { Container, Button, Input, Badge } from '../../components/ui';
+import { Container, Button, Input, PasswordInput, Badge } from '../../components/ui';
 import { useAuth } from '../../features/admin/useAuth';
 import { updateProfile, changePassword } from '../../api/profileService';
 import { ROLE_LABELS } from '../../features/admin/permissions';
@@ -178,10 +178,9 @@ export default function Profile() {
             <h2 className="font-bold text-primary">Change password</h2>
           </div>
 
-          <Input
+          <PasswordInput
             id={currentPasswordId}
             label="Current password"
-            type="password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             disabled={savingPassword}
@@ -189,10 +188,9 @@ export default function Profile() {
             required
           />
           <div className="grid sm:grid-cols-2 gap-5">
-            <Input
+            <PasswordInput
               id={newPasswordId}
               label="New password"
-              type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               disabled={savingPassword}
@@ -200,10 +198,9 @@ export default function Profile() {
               hint="At least 10 characters, with a letter and a number."
               required
             />
-            <Input
+            <PasswordInput
               id={confirmPasswordId}
               label="Confirm new password"
-              type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={savingPassword}

@@ -1,9 +1,10 @@
 import { useId, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { AlertTriangle, Eye, EyeOff, Info, Loader2, LogIn, ShieldCheck, WifiOff } from 'lucide-react';
+import { AlertTriangle, Info, Loader2, LogIn, ShieldCheck, WifiOff } from 'lucide-react';
 import { useAuth } from '../../features/admin/useAuth';
 import { isHttpError, isNetworkError } from '../../api/httpError';
 import { useDocumentTitle } from '../../utils/useDocumentTitle';
+import { PasswordInput } from '../../components/ui';
 
 // Generic on purpose: never confirm or deny that a given email is registered.
 const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password.';
@@ -37,7 +38,6 @@ const AdminLogin = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isNetworkFailure, setIsNetworkFailure] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -142,34 +142,16 @@ const AdminLogin = () => {
               />
             </div>
 
-            <div>
-              <label htmlFor={passwordId} className="field-label">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id={passwordId}
-                  type={showPassword ? 'text' : 'password'}
-                  className="field-input pr-11"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  required
-                  disabled={submitting}
-                  aria-invalid={error ? 'true' : undefined}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400 hover:text-slate-600 focus-visible:outline-none rounded-r-xl"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  aria-pressed={showPassword}
-                  tabIndex={submitting ? -1 : 0}
-                >
-                  {showPassword ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
-                </button>
-              </div>
-            </div>
+            <PasswordInput
+              id={passwordId}
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+              disabled={submitting}
+              aria-invalid={error ? 'true' : undefined}
+            />
 
             {error && (
               <p
