@@ -1,18 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertTriangle, ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { Container, PageSection, Button, Input, Skeleton } from '../../components/ui';
+import { AlertTriangle, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { Container, PageSection, Button, Skeleton } from '../../components/ui';
 import { BlogGrid, BlogEmptyState, FeaturedBlogCard } from '../../components/blog';
 import { listPosts } from '../../api/blogService';
-import { listCategories } from '../../api/categoryService';
 import { toDisplayPost } from '../../features/blog/utils';
 import { useSEO } from '../../utils/useSEO';
 import { cn } from '../../utils/cn';
 
 const PER_PAGE = 9;
-
-const CATEGORY_PILL_CLASSES =
-  'px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide border transition-colors';
 
 const BlogIndex = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,7 +31,6 @@ const BlogIndex = () => {
   const [error, setError] = useState('');
 
   const [featuredPost, setFeaturedPost] = useState(null);
-  const [categories, setCategories] = useState([]);
 
   const updateParams = useCallback(
     (patch, { resetPage = true } = {}) => {
@@ -63,20 +58,6 @@ const BlogIndex = () => {
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
-
-  // Best-effort — the filter pills just stay hidden if this fails, the rest
-  // of the page (search, pagination) still works.
-  useEffect(() => {
-    let cancelled = false;
-    listCategories()
-      .then((data) => {
-        if (!cancelled) setCategories(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // The hero only ever sits above an unfiltered first page, so it's only
   // fetched there. Falls back to the single latest post when nothing is
@@ -175,75 +156,63 @@ const BlogIndex = () => {
   return (
     <PageSection>
       <Container>
-        <header className="max-w-2xl mb-14">
-          <p className="eyebrow mb-4">Blog</p>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-primary mb-4 tracking-tight">
-            Field Notes
-          </h1>
-          <p className="text-lg text-slate-500 font-light leading-relaxed">
-            Write-ups on survey engineering, site supervision, and document control — practical
-            lessons from active project sites across Pakistan and beyond.
-          </p>
-        </header>
+        <div className="mb-16 lg:mb-20 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8 lg:gap-12">
+          <header className="max-w-2xl">
+            <p className="eyebrow mb-4">Blog</p>
+            <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold text-primary mb-5 tracking-tight leading-[1.08]">
+              Field Notes
+            </h1>
+            <p className="text-lg text-slate-500 font-light leading-relaxed">
+              Write-ups on survey engineering, site supervision, and document control — practical
+              lessons from active project sites across Pakistan and beyond.
+            </p>
+          </header>
 
-        <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="w-full max-w-sm">
-            <Input
+          <div className="relative w-full lg:w-72 lg:pt-2 shrink-0">
+            <label htmlFor="blog-search" className="sr-only">
+              Search articles
+            </label>
+            <Search
+              size={17}
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+              aria-hidden="true"
+            />
+            <input
               id="blog-search"
-              label="Search"
               type="search"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
               placeholder="Search articles…"
+              className="field-input pl-11"
             />
           </div>
-
-          {categories.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => updateParams({ category: '' })}
-                className={cn(
-                  CATEGORY_PILL_CLASSES,
-                  !category
-                    ? 'bg-accent/10 text-accent-strong border-accent/20'
-                    : 'bg-white text-slate-500 border-slate-200 hover:border-accent/30 hover:text-accent-strong'
-                )}
-              >
-                All
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => updateParams({ category: category === cat.name ? '' : cat.name })}
-                  aria-pressed={category === cat.name}
-                  className={cn(
-                    CATEGORY_PILL_CLASSES,
-                    category === cat.name
-                      ? 'bg-accent/10 text-accent-strong border-accent/20'
-                      : 'bg-white text-slate-500 border-slate-200 hover:border-accent/30 hover:text-accent-strong'
-                  )}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {showFeatured && (
-          <section className="mb-16">
+          <section className="mb-16 lg:mb-24">
             <p className="eyebrow mb-6">Featured</p>
             <FeaturedBlogCard post={featuredPost} />
           </section>
         )}
 
         <section>
-          <div className="flex items-center justify-between mb-8 gap-4">
-            <h2 className="text-2xl font-bold text-primary">
-              {hasActiveFilters ? 'Results' : 'Latest Articles'}
-            </h2>
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8 lg:mb-10">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-2xl font-bold text-primary">
+                {hasActiveFilters ? 'Results' : 'Latest Articles'}
+              </h2>
+              {category && (
+                <button
+                  type="button"
+                  onClick={() => updateParams({ category: '' })}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-accent-strong transition-colors hover:bg-accent/15"
+                >
+                  {category}
+                  <X size={12} aria-hidden="true" />
+                  <span className="sr-only">Clear category filter</span>
+                </button>
+              )}
+            </div>
             {hasActiveFilters && pagination && (
               <span className="text-sm text-slate-500 font-medium shrink-0">
                 {pagination.total} {pagination.total === 1 ? 'article' : 'articles'} found
@@ -293,7 +262,7 @@ const BlogIndex = () => {
               />
 
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-10">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-14 pt-8 border-t border-slate-100">
                   <p className="text-xs font-semibold text-slate-500">
                     Page {page} of {totalPages} — {pagination.total} articles total
                   </p>
@@ -302,7 +271,10 @@ const BlogIndex = () => {
                       type="button"
                       onClick={() => goToPage(page - 1)}
                       disabled={page <= 1}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-primary transition-all duration-200',
+                        'hover:border-slate-300 hover:-translate-y-0.5 disabled:opacity-40 disabled:pointer-events-none disabled:hover:translate-y-0'
+                      )}
                     >
                       <ChevronLeft size={13} /> Prev
                     </button>
@@ -310,7 +282,10 @@ const BlogIndex = () => {
                       type="button"
                       onClick={() => goToPage(page + 1)}
                       disabled={page >= totalPages}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-primary transition-all duration-200',
+                        'hover:border-slate-300 hover:-translate-y-0.5 disabled:opacity-40 disabled:pointer-events-none disabled:hover:translate-y-0'
+                      )}
                     >
                       Next <ChevronRight size={13} />
                     </button>

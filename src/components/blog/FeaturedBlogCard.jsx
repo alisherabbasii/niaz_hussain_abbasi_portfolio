@@ -39,7 +39,7 @@ const FeaturedBlogCard = ({ post, className }) => (
         <CategoryBadge category={post.category} />
       </div>
 
-      <h3 className="text-2xl md:text-3xl font-bold text-primary leading-tight mb-4">
+      <h3 className="text-3xl md:text-4xl font-bold text-primary leading-[1.12] mb-4">
         <Link
           to={`/blog/${post.slug}`}
           className="after:absolute after:inset-0 group-hover:text-accent-strong transition-colors"
@@ -48,7 +48,7 @@ const FeaturedBlogCard = ({ post, className }) => (
         </Link>
       </h3>
 
-      <p className="text-base text-slate-500 leading-relaxed mb-6">{post.description}</p>
+      <p className="text-base text-slate-500 leading-relaxed mb-8">{post.description}</p>
 
       <div className="flex items-center justify-between gap-4">
         <BlogMeta post={post} />
@@ -56,7 +56,7 @@ const FeaturedBlogCard = ({ post, className }) => (
           aria-hidden="true"
           className="flex items-center gap-1 text-accent-strong font-bold text-xs uppercase tracking-wide shrink-0 group-hover:translate-x-1 transition-transform"
         >
-          Read <ArrowRight size={14} />
+          Read article <ArrowRight size={14} />
         </span>
       </div>
     </div>

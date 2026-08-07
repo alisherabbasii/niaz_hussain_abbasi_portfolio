@@ -57,7 +57,7 @@ const BlogCard = ({ post, className }) => (
         aria-hidden="true"
         className="flex items-center gap-1 text-accent-strong font-bold text-xs uppercase tracking-wide shrink-0 group-hover:translate-x-1 transition-transform"
       >
-        Read <ArrowRight size={14} />
+        Read article <ArrowRight size={14} />
       </span>
     </div>
   </motion.article>
